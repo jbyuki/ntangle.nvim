@@ -14,7 +14,7 @@ for line in io.lines("tangle/ntangle.lua") do
 end
 pluglua:close()
 
-local plugsyntax = io.open("../syntax/tangle.lua", "w")
+local plugsyntax = io.open("../syntax/ntangle.vim", "w")
 for line in io.lines("tangle/syntax.vim") do
 	plugsyntax:write(line .. '\n')
 end
