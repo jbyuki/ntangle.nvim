@@ -20,20 +20,84 @@ local function tangle(filename)
 	sections = {}
 	curSection = nil
 	
-	lnum = 1
-	for line in io.lines(filename) do
-		if string.match(line, "^%s*@@") then
-			local hasSection = false
-			if sections[name] then
-				hasSection = true
-			end
+	if filename then
+		lnum = 1
+		for line in io.lines(filename) do
+			if string.match(line, "^%s*@@") then
+				local hasSection = false
+				if sections[name] then
+					hasSection = true
+				end
+				
+				if hasSection then
+					local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+					local text = pre .. "@" .. post
+					local l = { 
+						linetype = LineType.TEXT, 
+						str = text 
+					}
+					
+					l.lnum = lnum
+					
+					linkedlist.push_back(curSection.lines, l)
+					
+				end
 			
-			if hasSection then
-				local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
-				local text = pre .. "@" .. post
+			elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				local section = { linetype = LineType.SECTION, str = name, lines = {}}
+				
+				if op == '+=' or op == '-=' then
+					if sections[name] then
+						if op == '+=' then
+							linkedlist.push_back(sections[name].list, section)
+							
+						elseif op == '-=' then
+							linkedlist.push_front(sections[name].list, section)
+							
+						end
+					else
+						sections[name] = { root = false, list = {} }
+						
+						linkedlist.push_back(sections[name].list, section)
+						
+					end
+				
+				else 
+					sections[name] = { root = true, list = {} }
+					
+					linkedlist.push_back(sections[name].list, section)
+					
+				end
+				
+				curSection = section
+				
+			
+			elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+				local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+				if name == nil then
+					print(line)
+				end
+				
+				-- @check_that_sections_is_not_empty
+				local l = { 
+					linetype = LineType.REFERENCE, 
+					str = name,
+					prefix = prefix
+				}
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			
+			else
+				if sections[name] then
+					hasSection = true
+				end
+				
 				local l = { 
 					linetype = LineType.TEXT, 
-					str = text 
+					str = line 
 				}
 				
 				l.lnum = lnum
@@ -41,73 +105,104 @@ local function tangle(filename)
 				linkedlist.push_back(curSection.lines, l)
 				
 			end
+			
+			lnum = lnum+1;
+		end
 		
-		elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
-			
-			local section = { linetype = LineType.SECTION, str = name, lines = {}}
-			
-			if op == '+=' or op == '-=' then
+	else
+		lnum = 1
+		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		for _,line in ipairs(lines) do
+			if string.match(line, "^%s*@@") then
+				local hasSection = false
 				if sections[name] then
-					if op == '+=' then
+					hasSection = true
+				end
+				
+				if hasSection then
+					local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+					local text = pre .. "@" .. post
+					local l = { 
+						linetype = LineType.TEXT, 
+						str = text 
+					}
+					
+					l.lnum = lnum
+					
+					linkedlist.push_back(curSection.lines, l)
+					
+				end
+			
+			elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				local section = { linetype = LineType.SECTION, str = name, lines = {}}
+				
+				if op == '+=' or op == '-=' then
+					if sections[name] then
+						if op == '+=' then
+							linkedlist.push_back(sections[name].list, section)
+							
+						elseif op == '-=' then
+							linkedlist.push_front(sections[name].list, section)
+							
+						end
+					else
+						sections[name] = { root = false, list = {} }
+						
 						linkedlist.push_back(sections[name].list, section)
 						
-					elseif op == '-=' then
-						linkedlist.push_front(sections[name].list, section)
-						
 					end
-				else
-					sections[name] = { root = false, list = {} }
+				
+				else 
+					sections[name] = { root = true, list = {} }
 					
 					linkedlist.push_back(sections[name].list, section)
 					
 				end
-			
-			else 
-				sections[name] = { root = true, list = {} }
 				
-				linkedlist.push_back(sections[name].list, section)
+				curSection = section
+				
+			
+			elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+				local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+				if name == nil then
+					print(line)
+				end
+				
+				-- @check_that_sections_is_not_empty
+				local l = { 
+					linetype = LineType.REFERENCE, 
+					str = name,
+					prefix = prefix
+				}
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			
+			else
+				if sections[name] then
+					hasSection = true
+				end
+				
+				local l = { 
+					linetype = LineType.TEXT, 
+					str = line 
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
 				
 			end
 			
-			curSection = section
-			
-		
-		elseif string.match(line, "^%s*@[^@]%S*%s*$") then
-			local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
-			if name == nil then
-				print(line)
-			end
-			
-			-- @check_that_sections_is_not_empty
-			local l = { 
-				linetype = LineType.REFERENCE, 
-				str = name,
-				prefix = prefix
-			}
-			
-			linkedlist.push_back(curSection.lines, l)
-			
-		
-		else
-			if sections[name] then
-				hasSection = true
-			end
-			
-			local l = { 
-				linetype = LineType.TEXT, 
-				str = line 
-			}
-			
-			l.lnum = lnum
-			
-			linkedlist.push_back(curSection.lines, l)
-			
+			lnum = lnum+1;
 		end
 		
-		lnum = lnum+1;
 	end
-	
+	if not filename then
+		filename = vim.api.nvim_call_function("expand", { "%:p"})
+	end
 	local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
 	for name, section in pairs(sections) do
 		if section.root then

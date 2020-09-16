@@ -10,7 +10,11 @@ return {
 @functions+=
 local function tangle(filename)
 	@clear_sections
-	@read_file_line_by_line
+	if filename then
+		@read_file_line_by_line
+	else
+		@read_file_line_by_line_from_buffer
+	end
 	@output_sections
 end
 
@@ -20,6 +24,17 @@ tangle = tangle,
 @read_file_line_by_line+=
 lnum = 1
 for line in io.lines(filename) do
+	@check_if_line_escape_double_at
+	@check_if_line_is_section
+	@check_if_line_is_reference
+	@otherwise_add_to_section
+	lnum = lnum+1;
+end
+
+@read_file_line_by_line_from_buffer+=
+lnum = 1
+local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+for _,line in ipairs(lines) do
 	@check_if_line_escape_double_at
 	@check_if_line_is_section
 	@check_if_line_is_reference
@@ -160,6 +175,9 @@ local l = {
 linkedlist.push_back(curSection.lines, l)
 
 @output_sections+=
+if not filename then
+	filename = vim.api.nvim_call_function("expand", { "%:p"})
+end
 local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
 for name, section in pairs(sections) do
 	if section.root then

@@ -6,7 +6,7 @@ function! SaveTangle()
 	if !isdirectory(path_dir)
 		call mkdir(path_dir)
 	endif
-	call v:lua.ntangle.tangle(expand("%:p"))
+	call v:lua.ntangle.tangle()
 endfunction
 
 function! GoToTangle(args)
