@@ -9,6 +9,7 @@ return {
 
 @functions+=
 local function tangle(filename)
+	@clear_sections
 	@read_file_line_by_line
 	@output_sections
 end
@@ -49,6 +50,10 @@ require("linkedlist")
 @parse_variables+=
 local sections = {}
 local curSection = nil
+
+@clear_sections+=
+sections = {}
+curSection = nil
 
 @link_to_previous_section_if_needed+=
 if op == '+=' or op == '-=' then

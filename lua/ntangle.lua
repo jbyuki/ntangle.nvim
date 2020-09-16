@@ -17,6 +17,9 @@ local outputSections
 local getlinenum
 
 local function tangle(filename)
+	sections = {}
+	curSection = nil
+	
 	lnum = 1
 	for line in io.lines(filename) do
 		if string.match(line, "^%s*@@") then
