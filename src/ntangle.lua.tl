@@ -231,6 +231,7 @@ end
 
 @functions+=
 local function goto(filename, linenum, root)
+	@clear_sections
 	@read_file_line_by_line
 	@fake_output_until_linenum_readched
 	@go_to_line
