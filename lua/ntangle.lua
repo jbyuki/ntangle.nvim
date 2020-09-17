@@ -243,6 +243,9 @@ function outputSections(file, name, prefix)
 end
 
 local function goto(filename, linenum, root)
+	sections = {}
+	curSection = nil
+	
 	lnum = 1
 	for line in io.lines(filename) do
 		if string.match(line, "^%s*@@") then
