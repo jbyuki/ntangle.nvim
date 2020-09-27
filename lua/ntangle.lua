@@ -212,18 +212,52 @@ local function tangle(filename)
 				fn = parendir .. "/tangle/" .. tail
 			
 			else
-				fn = parendir .. "/tangle/" .. name
+				if string.match(name, "%./") then
+					fn = parendir .. string.sub(name, 2)
+				
+				else 
+					fn = parendir .. "/tangle/" .. name
+				end
+				
 			end
 			
-			file = io.open(fn, "w")
-			outputSections(file, name, "")
-			file:close()
+			lines = {}
+			outputSections(lines, file, name, "")
+			local modified = false
+			do
+				local f = io.open(fn, "r")
+				if f then 
+					modified = false
+					local lnum = 1
+					for line in f:lines() do
+						if lnum > #lines then
+							modified = true
+							break
+						end
+						if line ~= lines[lnum] then
+							modified = true
+							break
+						end
+						lnum = lnum + 1
+					end
+					
+				end
+				f:close()
+			end
+			
+			if modified then
+				local f = io.open(fn, "w")
+				for _,line in ipairs(lines) do
+					f:write(line .. "\n")
+				end
+				f:close()
+			end
 		end
 	end
 	
 end
 
-function outputSections(file, name, prefix)
+function outputSections(lines, file, name, prefix)
 	if not sections[name] then
 		return
 	end
@@ -231,11 +265,11 @@ function outputSections(file, name, prefix)
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			if line.linetype == LineType.TEXT then
-				file:write(prefix .. line.str .. "\n")
+				lines[#lines+1] = prefix .. line.str
 			end
 			
 			if line.linetype == LineType.REFERENCE then
-				outputSections(file, line.str, prefix .. line.prefix)
+				outputSections(lines, file, line.str, prefix .. line.prefix)
 			end
 			
 		end
@@ -370,6 +404,7 @@ end
 
 local function tangleAll()
 	local filelist = vim.api.nvim_call_function("glob", { "**/*.tl" })
+	
 	for file in vim.gsplit(filelist, "\n") do
 		tangle(file)
 	end

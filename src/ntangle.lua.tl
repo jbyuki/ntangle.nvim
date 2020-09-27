@@ -184,9 +184,10 @@ for name, section in pairs(sections) do
 		local fn
 		@if_star_replace_with_current_filename
 		@otherwise_put_node_name
-		file = io.open(fn, "w")
-		outputSections(file, name, "")
-		file:close()
+		lines = {}
+		outputSections(lines, file, name, "")
+		@check_file_is_modified
+		@if_modified_write_file
 	end
 end
 
@@ -197,6 +198,16 @@ if name == "*" then
 
 @otherwise_put_node_name+=
 else
+	@if_dot_slash_put_in_current_directory
+	@otherwise_put_in_tangle_directory
+end
+
+@if_dot_slash_put_in_current_directory+=
+if string.match(name, "%./") then
+	fn = parendir .. string.sub(name, 2)
+
+@otherwise_put_in_tangle_directory+=
+else 
 	fn = parendir .. "/tangle/" .. name
 end
 
@@ -204,7 +215,7 @@ end
 local outputSections
 
 @functions+=
-function outputSections(file, name, prefix)
+function outputSections(lines, file, name, prefix)
 	@check_if_section_exists_otherwise_return_nil
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
@@ -221,12 +232,12 @@ end
 
 @if_line_is_text_output_it+=
 if line.linetype == LineType.TEXT then
-	file:write(prefix .. line.str .. "\n")
+	lines[#lines+1] = prefix .. line.str
 end
 
-@if_line_is_text_output_it+=
+@if_reference_recursively_call_output+=
 if line.linetype == LineType.REFERENCE then
-	outputSections(file, line.str, prefix .. line.prefix)
+	outputSections(lines, file, line.str, prefix .. line.prefix)
 end
 
 @functions+=
@@ -303,3 +314,37 @@ tangleAll = tangleAll,
 
 @get_filelist+=
 local filelist = vim.api.nvim_call_function("glob", { "**/*.tl" })
+
+@check_file_is_modified+=
+local modified = false
+do
+	local f = io.open(fn, "r")
+	if f then 
+		modified = false
+		@check_if_every_line_match
+	end
+	f:close()
+end
+
+@check_if_every_line_match+=
+local lnum = 1
+for line in f:lines() do
+	if lnum > #lines then
+		modified = true
+		break
+	end
+	if line ~= lines[lnum] then
+		modified = true
+		break
+	end
+	lnum = lnum + 1
+end
+
+@if_modified_write_file+=
+if modified then
+	local f = io.open(fn, "w")
+	for _,line in ipairs(lines) do
+		f:write(line .. "\n")
+	end
+	f:close()
+end
