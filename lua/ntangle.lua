@@ -241,6 +241,10 @@ local function tangle(filename)
 						lnum = lnum + 1
 					end
 					
+					if lnum ~= #lines then
+						modified = true
+					end
+					
 				end
 				f:close()
 			end

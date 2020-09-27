@@ -340,6 +340,10 @@ for line in f:lines() do
 	lnum = lnum + 1
 end
 
+if lnum ~= #lines then
+	modified = true
+end
+
 @if_modified_write_file+=
 if modified then
 	local f = io.open(fn, "w")
