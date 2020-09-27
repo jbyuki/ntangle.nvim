@@ -241,7 +241,7 @@ local function tangle(filename)
 						lnum = lnum + 1
 					end
 					
-					if lnum ~= #lines then
+					if lnum-1 ~= #lines then
 						modified = true
 					end
 					
