@@ -322,8 +322,8 @@ do
 	if f then 
 		modified = false
 		@check_if_every_line_match
+		f:close()
 	end
-	f:close()
 end
 
 @check_if_every_line_match+=

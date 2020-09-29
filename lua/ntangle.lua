@@ -245,8 +245,8 @@ local function tangle(filename)
 						modified = true
 					end
 					
+					f:close()
 				end
-				f:close()
 			end
 			
 			if modified then
