@@ -323,6 +323,8 @@ do
 		modified = false
 		@check_if_every_line_match
 		f:close()
+	else
+		modified = true
 	end
 end
 
