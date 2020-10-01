@@ -49,5 +49,14 @@ lua buildcache = require("buildcache")
 @register_commands+=
 command! TangleBuildCache call v:lua.buildcache.build(fnamemodify("~/tangle_cache.txt", ":p"))
 
+@functions+=
+function! SaveTangleAll()
+	let path_dir = expand("%:p:h") . "/" . g:tangle_dir
+	if !isdirectory(path_dir)
+		call mkdir(path_dir)
+	endif
+	call v:lua.ntangle.tangleAll()
+endfunction
+
 @register_commands+=
-command! TangleAll call v:lua.ntangle.tangleAll()
+command! TangleAll call SaveTangleAll()

@@ -349,8 +349,12 @@ end
 @if_modified_write_file+=
 if modified then
 	local f = io.open(fn, "w")
-	for _,line in ipairs(lines) do
-		f:write(line .. "\n")
+	if f then
+		for _,line in ipairs(lines) do
+			f:write(line .. "\n")
+		end
+		f:close()
+	else
+		print("Could not write to " .. fn)
 	end
-	f:close()
 end
