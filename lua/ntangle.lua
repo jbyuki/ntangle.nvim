@@ -16,6 +16,8 @@ local outputSections
 
 local getlinenum
 
+local toluapat
+
 local function tangle(filename)
 	sections = {}
 	curSection = nil
@@ -262,6 +264,7 @@ local function tangle(filename)
 					print("Could not write to " .. fn)
 				end
 			end
+			
 		end
 	end
 	
@@ -286,7 +289,7 @@ function outputSections(lines, file, name, prefix)
 	end
 end
 
-local function goto(filename, linenum, root)
+local function goto(filename, linenum, root_pattern)
 	sections = {}
 	curSection = nil
 	
@@ -378,6 +381,17 @@ local function goto(filename, linenum, root)
 		lnum = lnum+1;
 	end
 	
+	local root
+	for name,section in pairs(sections) do
+		if section.root and string.find(name, toluapat(root_pattern)) then
+			root = name
+			break
+		end
+	end
+	
+	if not root then
+		print("Could not root section " .. root_pattern .. " " .. toluapat(root_pattern))
+	end
 	local _,lnum = getlinenum(root, 1, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
 	
@@ -418,6 +432,18 @@ local function tangleAll()
 	for file in vim.gsplit(filelist, "\n") do
 		tangle(file)
 	end
+end
+
+function toluapat(pat)
+	local luapat = ""
+	for i=1,#pat do
+		local c = string.sub(pat, i, i)
+
+		if c == '*' then luapat = luapat .. "."
+		elseif c == '.' then luapat = luapat .. "%."
+		else luapat = luapat .. c end
+	end
+	return luapat
 end
 
 return {

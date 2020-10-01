@@ -241,9 +241,10 @@ if line.linetype == LineType.REFERENCE then
 end
 
 @functions+=
-local function goto(filename, linenum, root)
+local function goto(filename, linenum, root_pattern)
 	@clear_sections
 	@read_file_line_by_line
+	@select_based_on_pattern
 	@fake_output_until_linenum_readched
 	@go_to_line
 end
@@ -357,4 +358,33 @@ if modified then
 	else
 		print("Could not write to " .. fn)
 	end
+end
+
+@declare_functions+=
+local toluapat
+
+@functions+=
+function toluapat(pat)
+	local luapat = ""
+	for i=1,#pat do
+		local c = string.sub(pat, i, i)
+
+		if c == '*' then luapat = luapat .. "."
+		elseif c == '.' then luapat = luapat .. "%."
+		else luapat = luapat .. c end
+	end
+	return luapat
+end
+
+@select_based_on_pattern+=
+local root
+for name,section in pairs(sections) do
+	if section.root and string.find(name, toluapat(root_pattern)) then
+		root = name
+		break
+	end
+end
+
+if not root then
+	print("Could not root section " .. root_pattern .. " " .. toluapat(root_pattern))
 end
