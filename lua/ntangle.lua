@@ -382,15 +382,19 @@ local function goto(filename, linenum, root_pattern)
 	end
 	
 	local root
-	for name,section in pairs(sections) do
-		if section.root and string.find(name, toluapat(root_pattern)) then
-			root = name
-			break
+	if root_pattern ~= "*" then
+		for name,section in pairs(sections) do
+			if section.root and string.find(name, toluapat(root_pattern)) then
+				root = name
+				break
+			end
 		end
-	end
 	
-	if not root then
-		print("Could not root section " .. root_pattern .. " " .. toluapat(root_pattern))
+		if not root then
+			print("Could not root section " .. root_pattern .. " " .. toluapat(root_pattern))
+		end
+	else
+		root = root_pattern
 	end
 	local _,lnum = getlinenum(root, 1, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
