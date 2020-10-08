@@ -400,6 +400,7 @@ local function collectSection(filename, name)
 	@check_if_section_is_present
 	@collect_every_line_in_section
 	@add_lines_to_quickfix
+	@open_quickfix
 end
 
 @export_symbols+=
@@ -429,13 +430,16 @@ end
 
 @if_line_is_text_output_it_in_quickfix+=
 if line.linetype == LineType.TEXT then
-	lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0 }
+	lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.str }
 end
 
 @if_reference_output_it_in_quickfix+=
 if line.linetype == LineType.REFERENCE then
-	lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0}
+	lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.prefix .. "@" .. line.str}
 end
 
 @add_lines_to_quickfix+=
 vim.api.nvim_call_function("setqflist", { lines, "r" })
+
+@open_quickfix+=
+vim.api.nvim_command(":copen")

@@ -559,17 +559,19 @@ local function collectSection(filename, name)
 	for section in linkedlist.iter(s.list) do
 		for line in linkedlist.iter(section.lines) do
 			if line.linetype == LineType.TEXT then
-				lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0 }
+				lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.str }
 			end
 			
 			if line.linetype == LineType.REFERENCE then
-				lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0}
+				lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.prefix .. "@" .. line.str}
 			end
 			
 		end
 	end
 	
 	vim.api.nvim_call_function("setqflist", { lines, "r" })
+	
+	vim.api.nvim_command(":copen")
 end
 
 return {
