@@ -60,3 +60,11 @@ endfunction
 
 @register_commands+=
 command! TangleAll call SaveTangleAll()
+
+@register_commands+=
+command! -nargs=1 TangleCollect call TangleCollect("<args>")
+
+@functions+=
+function! TangleCollect(args)
+	call v:lua.ntangle.collectSection(expand("%"), a:args)
+endfunction

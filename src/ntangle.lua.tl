@@ -392,3 +392,50 @@ if root_pattern ~= "*" then
 else
 	root = root_pattern
 end
+
+@functions+=
+local function collectSection(filename, name)
+	@clear_sections
+	@read_file_line_by_line
+	@check_if_section_is_present
+	@collect_every_line_in_section
+	@add_lines_to_quickfix
+end
+
+@export_symbols+=
+collectSection = collectSection,
+
+@check_if_section_is_present+=
+local s
+for n, section in pairs(sections) do
+	if n == name then
+		s = section
+		break
+	end
+end
+if not s then
+	print("Could not find section " .. name)
+	return
+end
+
+@collect_every_line_in_section+=
+local lines = {}
+for section in linkedlist.iter(s.list) do
+	for line in linkedlist.iter(section.lines) do
+		@if_line_is_text_output_it_in_quickfix
+		@if_reference_output_it_in_quickfix
+	end
+end
+
+@if_line_is_text_output_it_in_quickfix+=
+if line.linetype == LineType.TEXT then
+	lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0 }
+end
+
+@if_reference_output_it_in_quickfix+=
+if line.linetype == LineType.REFERENCE then
+	lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0}
+end
+
+@add_lines_to_quickfix+=
+vim.api.nvim_call_function("setqflist", { lines, "r" })

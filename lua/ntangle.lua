@@ -396,6 +396,7 @@ local function goto(filename, linenum, root_pattern)
 	else
 		root = root_pattern
 	end
+	
 	local _,lnum = getlinenum(root, 1, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
 	
@@ -450,12 +451,135 @@ function toluapat(pat)
 	return luapat
 end
 
+local function collectSection(filename, name)
+	sections = {}
+	curSection = nil
+	
+	lnum = 1
+	for line in io.lines(filename) do
+		if string.match(line, "^%s*@@") then
+			local hasSection = false
+			if sections[name] then
+				hasSection = true
+			end
+			
+			if hasSection then
+				local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+				local text = pre .. "@" .. post
+				local l = { 
+					linetype = LineType.TEXT, 
+					str = text 
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			end
+		
+		elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+			
+			local section = { linetype = LineType.SECTION, str = name, lines = {}}
+			
+			if op == '+=' or op == '-=' then
+				if sections[name] then
+					if op == '+=' then
+						linkedlist.push_back(sections[name].list, section)
+						
+					elseif op == '-=' then
+						linkedlist.push_front(sections[name].list, section)
+						
+					end
+				else
+					sections[name] = { root = false, list = {} }
+					
+					linkedlist.push_back(sections[name].list, section)
+					
+				end
+			
+			else 
+				sections[name] = { root = true, list = {} }
+				
+				linkedlist.push_back(sections[name].list, section)
+				
+			end
+			
+			curSection = section
+			
+		
+		elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+			local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+			if name == nil then
+				print(line)
+			end
+			
+			-- @check_that_sections_is_not_empty
+			local l = { 
+				linetype = LineType.REFERENCE, 
+				str = name,
+				prefix = prefix
+			}
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		
+		else
+			if sections[name] then
+				hasSection = true
+			end
+			
+			local l = { 
+				linetype = LineType.TEXT, 
+				str = line 
+			}
+			
+			l.lnum = lnum
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		end
+		
+		lnum = lnum+1;
+	end
+	
+	local s
+	for n, section in pairs(sections) do
+		if n == name then
+			s = section
+			break
+		end
+	end
+	if not s then
+		print("Could not find section " .. name)
+		return
+	end
+	
+	local lines = {}
+	for section in linkedlist.iter(s.list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.TEXT then
+				lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0 }
+			end
+			
+			if line.linetype == LineType.REFERENCE then
+				lines[#lines+1] = { filename = filename, lnum = line.lnum, vcol = 0}
+			end
+			
+		end
+	end
+	
+	vim.api.nvim_call_function("setqflist", { lines, "r" })
+end
+
 return {
 tangle = tangle,
 
 goto = goto,
 
 tangleAll = tangleAll,
+
+collectSection = collectSection,
 
 }
 

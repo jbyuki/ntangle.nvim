@@ -30,6 +30,9 @@ function! SaveTangleAll()
 	call v:lua.ntangle.tangleAll()
 endfunction
 
+function! TangleCollect(args)
+	call v:lua.ntangle.collectSection(expand("%"), a:args)
+endfunction
 autocmd BufWrite *.tl call SaveTangle()
 
 lua ntangle = require("ntangle")
@@ -41,4 +44,7 @@ command! -nargs=1 TangleGoto call GoToTangle("<args>")
 command! TangleBuildCache call v:lua.buildcache.build(fnamemodify("~/tangle_cache.txt", ":p"))
 
 command! TangleAll call SaveTangleAll()
+
+command! -nargs=1 TangleCollect call TangleCollect("<args>")
+
 
