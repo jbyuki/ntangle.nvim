@@ -451,12 +451,13 @@ function toluapat(pat)
 	return luapat
 end
 
-local function collectSection(filename, name)
+local function collectSection()
 	sections = {}
 	curSection = nil
 	
 	lnum = 1
-	for line in io.lines(filename) do
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	for _,line in ipairs(lines) do
 		if string.match(line, "^%s*@@") then
 			local hasSection = false
 			if sections[name] then
@@ -543,6 +544,13 @@ local function collectSection(filename, name)
 		lnum = lnum+1;
 	end
 	
+	local line = vim.api.nvim_get_current_line()
+	local name
+	local _, _, name = string.find(line, "@([^%s=+-]+)")
+	if not name then 
+		print("Could not parse section name") 
+	end
+	
 	local s
 	for n, section in pairs(sections) do
 		if n == name then
@@ -558,20 +566,34 @@ local function collectSection(filename, name)
 	local lines = {}
 	for section in linkedlist.iter(s.list) do
 		for line in linkedlist.iter(section.lines) do
-			if line.linetype == LineType.TEXT then
-				lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.str }
-			end
-			
-			if line.linetype == LineType.REFERENCE then
-				lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.prefix .. "@" .. line.str}
-			end
-			
+			lines[#lines+1] = line
 		end
 	end
 	
-	vim.api.nvim_call_function("setqflist", { lines, "r" })
+
+	if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
+		vim.api.nvim_command("edit transpose")
+		vim.api.nvim_command("setlocal buftype=nofile")
+		vim.api.nvim_command("setlocal bufhidden=hide")
+		vim.api.nvim_command("setlocal noswapfile")
+		
+	end
 	
-	vim.api.nvim_command(":copen")
+	local desiredbufnr = vim.api.nvim_call_function("bufnr", {"transpose"})
+	vim.api.nvim_command("buffer " .. desiredbufnr)
+	
+	vim.api.nvim_command("normal ggdG")
+	
+	local curnum = 0
+	for _,line in ipairs(lines) do
+		local text
+		if line.linetype == LineType.TEXT then text = line.str end
+		
+		if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
+		vim.api.nvim_buf_set_lines(desiredbufnr, curnum, curnum, false, { text })
+		curnum = curnum + 1
+	end
+	
 end
 
 return {

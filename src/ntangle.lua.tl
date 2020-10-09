@@ -394,13 +394,17 @@ else
 end
 
 @functions+=
-local function collectSection(filename, name)
+local function collectSection()
 	@clear_sections
-	@read_file_line_by_line
+	@read_file_line_by_line_from_buffer
+	@extract_section_name_from_current_line
 	@check_if_section_is_present
 	@collect_every_line_in_section
-	@add_lines_to_quickfix
-	@open_quickfix
+
+	@create_buffer_if_not_existent
+	@switch_to_buffer
+	@clear_buffer
+	@put_lines_in_buffer
 end
 
 @export_symbols+=
@@ -423,23 +427,48 @@ end
 local lines = {}
 for section in linkedlist.iter(s.list) do
 	for line in linkedlist.iter(section.lines) do
-		@if_line_is_text_output_it_in_quickfix
-		@if_reference_output_it_in_quickfix
+		lines[#lines+1] = line
 	end
 end
 
-@if_line_is_text_output_it_in_quickfix+=
-if line.linetype == LineType.TEXT then
-	lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.str }
+@extract_section_name_from_current_line+=
+local line = vim.api.nvim_get_current_line()
+local name
+local _, _, name = string.find(line, "@([^%s=+-]+)")
+if not name then 
+	print("Could not parse section name") 
 end
 
-@if_reference_output_it_in_quickfix+=
-if line.linetype == LineType.REFERENCE then
-	lines[#lines+1] = { filename = filename, lnum = line.lnum, text = line.prefix .. "@" .. line.str}
+@create_buffer_if_not_existent+=
+if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
+	vim.api.nvim_command("edit transpose")
+	@setup_buffer
 end
 
-@add_lines_to_quickfix+=
-vim.api.nvim_call_function("setqflist", { lines, "r" })
+@setup_buffer+=
+vim.api.nvim_command("setlocal buftype=nofile")
+vim.api.nvim_command("setlocal bufhidden=hide")
+vim.api.nvim_command("setlocal noswapfile")
 
-@open_quickfix+=
-vim.api.nvim_command(":copen")
+@switch_to_buffer+=
+local desiredbufnr = vim.api.nvim_call_function("bufnr", {"transpose"})
+vim.api.nvim_command("buffer " .. desiredbufnr)
+
+@clear_buffer+=
+vim.api.nvim_command("normal ggdG")
+
+@put_lines_in_buffer+=
+local curnum = 0
+for _,line in ipairs(lines) do
+	local text
+	@get_line_text_from_line_text
+	@get_line_text_from_line_reference
+	vim.api.nvim_buf_set_lines(desiredbufnr, curnum, curnum, false, { text })
+	curnum = curnum + 1
+end
+
+@get_line_text_from_line_text+=
+if line.linetype == LineType.TEXT then text = line.str end
+
+@get_line_text_from_line_reference+=
+if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
