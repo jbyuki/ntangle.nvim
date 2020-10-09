@@ -63,4 +63,3 @@ command! TangleAll call SaveTangleAll()
 
 @register_commands+=
 command! TangleCollect call v:lua.ntangle.collectSection()
-

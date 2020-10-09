@@ -44,4 +44,3 @@ command! TangleAll call SaveTangleAll()
 
 command! TangleCollect call v:lua.ntangle.collectSection()
 
-

@@ -12,6 +12,10 @@ local LineType = {
 	
 }
 
+local lineRefs = {}
+
+local nagivationLines = {}
+
 local outputSections
 
 local getlinenum
@@ -21,6 +25,8 @@ local toluapat
 local function tangle(filename)
 	sections = {}
 	curSection = nil
+	
+	lineRefs = {}
 	
 	if filename then
 		lnum = 1
@@ -198,6 +204,8 @@ local function tangle(filename)
 				
 			end
 			
+			lineRefs[lnum] = curSection.str
+			
 			lnum = lnum+1;
 		end
 		
@@ -292,6 +300,8 @@ end
 local function goto(filename, linenum, root_pattern)
 	sections = {}
 	curSection = nil
+	
+	lineRefs = {}
 	
 	lnum = 1
 	for line in io.lines(filename) do
@@ -455,6 +465,8 @@ local function collectSection()
 	sections = {}
 	curSection = nil
 	
+	lineRefs = {}
+	
 	lnum = 1
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	for _,line in ipairs(lines) do
@@ -541,15 +553,13 @@ local function collectSection()
 			
 		end
 		
+		lineRefs[lnum] = curSection.str
+		
 		lnum = lnum+1;
 	end
 	
-	local line = vim.api.nvim_get_current_line()
-	local name
-	local _, _, name = string.find(line, "@([^%s=+-]+)")
-	if not name then 
-		print("Could not parse section name") 
-	end
+	local curnum = vim.api.nvim_call_function("line", {"."})
+	local name = lineRefs[curnum]
 	
 	local s
 	for n, section in pairs(sections) do
@@ -570,12 +580,17 @@ local function collectSection()
 		end
 	end
 	
+	local originbuf = vim.api.nvim_call_function("bufnr", {})
+	local curcol = vim.api.nvim_call_function("col", {"."})
+	
 
 	if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
 		vim.api.nvim_command("edit transpose")
 		vim.api.nvim_command("setlocal buftype=nofile")
 		vim.api.nvim_command("setlocal bufhidden=hide")
 		vim.api.nvim_command("setlocal noswapfile")
+		
+		vim.api.nvim_buf_set_keymap(0, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
 		
 	end
 	
@@ -584,15 +599,39 @@ local function collectSection()
 	
 	vim.api.nvim_command("normal ggdG")
 	
-	local curnum = 0
+	local lnumtr = 0
+	local jumpline = 0
 	for _,line in ipairs(lines) do
 		local text
 		if line.linetype == LineType.TEXT then text = line.str end
 		
 		if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
-		vim.api.nvim_buf_set_lines(desiredbufnr, curnum, curnum, false, { text })
-		curnum = curnum + 1
+		
+		if line.lnum == curnum then
+			jumpline = lnumtr+1
+		end
+		
+		vim.api.nvim_buf_set_lines(desiredbufnr, lnumtr, lnumtr, false, { text })
+		lnumtr = lnumtr + 1
 	end
+	
+	navigationLines = {}
+	for _,line in ipairs(lines) do 
+		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
+	end
+	
+	vim.api.nvim_call_function("cursor", { jumpline, curcol })
+end
+
+function navigateTo()
+	local curline = vim.api.nvim_call_function("line", {'.'})
+	local curcol = vim.api.nvim_call_function("col", {'.'})
+	local nav = navigationLines[curline]
+	
+	vim.api.nvim_command("buffer " .. nav.buf)
+	
+	vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
+	
 	
 end
 

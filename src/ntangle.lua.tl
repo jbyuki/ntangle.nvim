@@ -39,6 +39,7 @@ for _,line in ipairs(lines) do
 	@check_if_line_is_section
 	@check_if_line_is_reference
 	@otherwise_add_to_section
+	@save_line_reference
 	lnum = lnum+1;
 end
 
@@ -397,14 +398,17 @@ end
 local function collectSection()
 	@clear_sections
 	@read_file_line_by_line_from_buffer
-	@extract_section_name_from_current_line
+	@get_section_name_of_current_line
 	@check_if_section_is_present
 	@collect_every_line_in_section
+	@save_current_buffer
 
 	@create_buffer_if_not_existent
 	@switch_to_buffer
 	@clear_buffer
 	@put_lines_in_buffer
+	@save_lines_for_navigation
+	@jump_to_lines_in_transpose_buffer
 end
 
 @export_symbols+=
@@ -431,13 +435,18 @@ for section in linkedlist.iter(s.list) do
 	end
 end
 
-@extract_section_name_from_current_line+=
-local line = vim.api.nvim_get_current_line()
-local name
-local _, _, name = string.find(line, "@([^%s=+-]+)")
-if not name then 
-	print("Could not parse section name") 
-end
+@parse_variables+=
+local lineRefs = {}
+
+@save_line_reference+=
+lineRefs[lnum] = curSection.str
+
+@clear_sections+=
+lineRefs = {}
+
+@get_section_name_of_current_line+=
+local curnum = vim.api.nvim_call_function("line", {"."})
+local name = lineRefs[curnum]
 
 @create_buffer_if_not_existent+=
 if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
@@ -458,13 +467,15 @@ vim.api.nvim_command("buffer " .. desiredbufnr)
 vim.api.nvim_command("normal ggdG")
 
 @put_lines_in_buffer+=
-local curnum = 0
+local lnumtr = 0
+local jumpline = 0
 for _,line in ipairs(lines) do
 	local text
 	@get_line_text_from_line_text
 	@get_line_text_from_line_reference
-	vim.api.nvim_buf_set_lines(desiredbufnr, curnum, curnum, false, { text })
-	curnum = curnum + 1
+	@check_for_line_to_jump_to
+	vim.api.nvim_buf_set_lines(desiredbufnr, lnumtr, lnumtr, false, { text })
+	lnumtr = lnumtr + 1
 end
 
 @get_line_text_from_line_text+=
@@ -472,3 +483,46 @@ if line.linetype == LineType.TEXT then text = line.str end
 
 @get_line_text_from_line_reference+=
 if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
+
+@setup_buffer+=
+vim.api.nvim_buf_set_keymap(0, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
+
+@parse_variables+=
+local nagivationLines = {}
+
+@save_current_buffer+=
+local originbuf = vim.api.nvim_call_function("bufnr", {})
+local curcol = vim.api.nvim_call_function("col", {"."})
+
+@save_lines_for_navigation+=
+navigationLines = {}
+for _,line in ipairs(lines) do 
+	navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
+end
+
+@functions+=
+function navigateTo()
+	@get_current_line_number
+	@switch_to_back_to_buffer
+	@jump_to_linenumber
+end
+
+@get_current_line_number+=
+local curline = vim.api.nvim_call_function("line", {'.'})
+local curcol = vim.api.nvim_call_function("col", {'.'})
+local nav = navigationLines[curline]
+
+@switch_to_back_to_buffer+=
+vim.api.nvim_command("buffer " .. nav.buf)
+
+@jump_to_linenumber+=
+vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
+
+
+@check_for_line_to_jump_to+=
+if line.lnum == curnum then
+	jumpline = lnumtr+1
+end
+
+@jump_to_lines_in_transpose_buffer+=
+vim.api.nvim_call_function("cursor", { jumpline, curcol })
