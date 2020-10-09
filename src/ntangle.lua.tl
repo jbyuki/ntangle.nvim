@@ -256,6 +256,9 @@ goto = goto,
 @create_text_line+=
 l.lnum = lnum
 
+@create_line_reference+=
+l.lnum = lnum
+
 @create_text_line_without_at+=
 l.lnum = lnum
 
@@ -468,7 +471,7 @@ vim.api.nvim_command("normal ggdG")
 
 @put_lines_in_buffer+=
 local lnumtr = 0
-local jumpline = 0
+local jumpline = 1
 for _,line in ipairs(lines) do
 	local text
 	@get_line_text_from_line_text
@@ -525,4 +528,4 @@ if line.lnum == curnum then
 end
 
 @jump_to_lines_in_transpose_buffer+=
-vim.api.nvim_call_function("cursor", { jumpline, curcol })
+vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })

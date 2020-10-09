@@ -95,6 +95,8 @@ local function tangle(filename)
 					prefix = prefix
 				}
 				
+				l.lnum = lnum
+				
 				linkedlist.push_back(curSection.lines, l)
 				
 			
@@ -184,6 +186,8 @@ local function tangle(filename)
 					str = name,
 					prefix = prefix
 				}
+				
+				l.lnum = lnum
 				
 				linkedlist.push_back(curSection.lines, l)
 				
@@ -369,6 +373,8 @@ local function goto(filename, linenum, root_pattern)
 				prefix = prefix
 			}
 			
+			l.lnum = lnum
+			
 			linkedlist.push_back(curSection.lines, l)
 			
 		
@@ -534,6 +540,8 @@ local function collectSection()
 				prefix = prefix
 			}
 			
+			l.lnum = lnum
+			
 			linkedlist.push_back(curSection.lines, l)
 			
 		
@@ -600,7 +608,7 @@ local function collectSection()
 	vim.api.nvim_command("normal ggdG")
 	
 	local lnumtr = 0
-	local jumpline = 0
+	local jumpline = 1
 	for _,line in ipairs(lines) do
 		local text
 		if line.linetype == LineType.TEXT then text = line.str end
@@ -620,7 +628,7 @@ local function collectSection()
 		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
 	end
 	
-	vim.api.nvim_call_function("cursor", { jumpline, curcol })
+	vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
 end
 
 function navigateTo()
