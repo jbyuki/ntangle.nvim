@@ -623,12 +623,14 @@ local function collectSection()
 		lnumtr = lnumtr + 1
 	end
 	
+	vim.api.nvim_command("normal Gddgg")
 	navigationLines = {}
 	for _,line in ipairs(lines) do 
 		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
 	end
 	
 	vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+	
 end
 
 function navigateTo()

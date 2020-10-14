@@ -410,6 +410,7 @@ local function collectSection()
 	@switch_to_buffer
 	@clear_buffer
 	@put_lines_in_buffer
+	@remove_last_line_in_buffer
 	@save_lines_for_navigation
 	@jump_to_lines_in_transpose_buffer
 end
@@ -529,3 +530,6 @@ end
 
 @jump_to_lines_in_transpose_buffer+=
 vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+
+@remove_last_line_in_buffer+=
+vim.api.nvim_command("normal Gddgg")
