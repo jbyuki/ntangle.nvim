@@ -199,13 +199,18 @@ if name == "*" then
 
 @otherwise_put_node_name+=
 else
-	@if_dot_slash_put_in_current_directory
+	@if_has_slash_put_in_indicated_directory
 	@otherwise_put_in_tangle_directory
 end
 
-@if_dot_slash_put_in_current_directory+=
-if string.match(name, "%./") then
-	fn = parendir .. string.sub(name, 2)
+@parse_variables+=
+ntangleevents = {"hello world"}
+
+@if_has_slash_put_in_indicated_directory+=
+if string.find(name, "/") then
+	ntangleevents[#ntangleevents+1] = name
+	ntangleevents[#ntangleevents+1] = parendir
+	fn = parendir .. "/" .. name
 
 @otherwise_put_in_tangle_directory+=
 else 

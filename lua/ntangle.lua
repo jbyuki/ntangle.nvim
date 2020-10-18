@@ -12,6 +12,8 @@ local LineType = {
 	
 }
 
+ntangleevents = {"hello world"}
+
 local lineRefs = {}
 
 local nagivationLines = {}
@@ -226,8 +228,10 @@ local function tangle(filename)
 				fn = parendir .. "/tangle/" .. tail
 			
 			else
-				if string.match(name, "%./") then
-					fn = parendir .. string.sub(name, 2)
+				if string.find(name, "/") then
+					ntangleevents[#ntangleevents+1] = name
+					ntangleevents[#ntangleevents+1] = parendir
+					fn = parendir .. "/" .. name
 				
 				else 
 					fn = parendir .. "/tangle/" .. name
