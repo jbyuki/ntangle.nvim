@@ -203,13 +203,8 @@ else
 	@otherwise_put_in_tangle_directory
 end
 
-@parse_variables+=
-ntangleevents = {"hello world"}
-
 @if_has_slash_put_in_indicated_directory+=
 if string.find(name, "/") then
-	ntangleevents[#ntangleevents+1] = name
-	ntangleevents[#ntangleevents+1] = parendir
 	fn = parendir .. "/" .. name
 
 @otherwise_put_in_tangle_directory+=
@@ -538,3 +533,23 @@ vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
 
 @remove_last_line_in_buffer+=
 vim.api.nvim_command("normal Gddgg")
+
+@functions+=
+local function getRootFilename()
+	local filename = vim.api.nvim_call_function("expand", { "%:p"})
+	local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
+
+	@get_first_line_section_name
+	@parse_section_name
+
+	local fn
+	@if_star_replace_with_current_filename
+	@otherwise_put_node_name
+	return fn
+end
+
+@get_first_line_section_name+=
+local line = vim.api.nvim_buf_get_lines(0, 0, 1, true)[1]
+
+@export_symbols+=
+getRootFilename = getRootFilename,

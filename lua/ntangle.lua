@@ -12,8 +12,6 @@ local LineType = {
 	
 }
 
-ntangleevents = {"hello world"}
-
 local lineRefs = {}
 
 local nagivationLines = {}
@@ -229,8 +227,6 @@ local function tangle(filename)
 			
 			else
 				if string.find(name, "/") then
-					ntangleevents[#ntangleevents+1] = name
-					ntangleevents[#ntangleevents+1] = parendir
 					fn = parendir .. "/" .. name
 				
 				else 
@@ -628,6 +624,7 @@ local function collectSection()
 	end
 	
 	vim.api.nvim_command("normal Gddgg")
+	
 	navigationLines = {}
 	for _,line in ipairs(lines) do 
 		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
@@ -649,6 +646,33 @@ function navigateTo()
 	
 end
 
+local function getRootFilename()
+	local filename = vim.api.nvim_call_function("expand", { "%:p"})
+	local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
+
+	local line = vim.api.nvim_buf_get_lines(0, 0, 1, true)[1]
+	
+	local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+	
+
+	local fn
+	if name == "*" then
+		local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+		fn = parendir .. "/tangle/" .. tail
+	
+	else
+		if string.find(name, "/") then
+			fn = parendir .. "/" .. name
+		
+		else 
+			fn = parendir .. "/tangle/" .. name
+		end
+		
+	end
+	
+	return fn
+end
+
 return {
 tangle = tangle,
 
@@ -658,5 +682,6 @@ tangleAll = tangleAll,
 
 collectSection = collectSection,
 
+getRootFilename = getRootFilename,
 }
 
