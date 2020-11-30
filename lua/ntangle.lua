@@ -22,6 +22,8 @@ local getlinenum
 
 local toluapat
 
+local collectLines
+
 local function tangle(filename)
 	sections = {}
 	curSection = nil
@@ -569,24 +571,8 @@ local function collectSection()
 	local curnum = vim.api.nvim_call_function("line", {"."})
 	local name = lineRefs[curnum]
 	
-	local s
-	for n, section in pairs(sections) do
-		if n == name then
-			s = section
-			break
-		end
-	end
-	if not s then
-		print("Could not find section " .. name)
-		return
-	end
-	
 	local lines = {}
-	for section in linkedlist.iter(s.list) do
-		for line in linkedlist.iter(section.lines) do
-			lines[#lines+1] = line
-		end
-	end
+	collectLines(name, lines, "")
 	
 	local originbuf = vim.api.nvim_call_function("bufnr", {})
 	local curcol = vim.api.nvim_call_function("col", {"."})
@@ -610,12 +596,8 @@ local function collectSection()
 	local lnumtr = 0
 	local jumpline = 1
 	for _,line in ipairs(lines) do
-		local text
-		if line.linetype == LineType.TEXT then text = line.str end
-		
-		if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
-		
-		if line.lnum == curnum then
+		local lnum, text = unpack(line)
+		if lnum == curnum then
 			jumpline = lnumtr+1
 		end
 		
@@ -627,10 +609,30 @@ local function collectSection()
 	
 	navigationLines = {}
 	for _,line in ipairs(lines) do 
-		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
+		local lnum, _ = unpack(line)
+		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = lnum }
 	end
 	
 	vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+	
+end
+
+function collectLines(name, lines, prefix)
+	local s
+	for n, section in pairs(sections) do
+		if n == name then
+			s = section
+			break
+		end
+	end
+	if not s then return end
+	
+	for section in linkedlist.iter(s.list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.TEXT then table.insert(lines, { line.lnum, prefix .. line.str })
+			elseif line.linetype == LineType.REFERENCE then collectLines(line.str, lines, prefix .. line.prefix) end
+		end
+	end
 	
 end
 

@@ -402,8 +402,7 @@ local function collectSection()
 	@clear_sections
 	@read_file_line_by_line_from_buffer
 	@get_section_name_of_current_line
-	@check_if_section_is_present
-	@collect_every_line_in_section
+	@collect_recursively_lines
 	@save_current_buffer
 
 	@create_buffer_if_not_existent
@@ -426,18 +425,28 @@ for n, section in pairs(sections) do
 		break
 	end
 end
-if not s then
-	print("Could not find section " .. name)
-	return
+if not s then return end
+
+@declare_functions+=
+local collectLines
+
+@functions+=
+function collectLines(name, lines, prefix)
+	@check_if_section_is_present
+	@collect_every_line_in_section
 end
 
 @collect_every_line_in_section+=
-local lines = {}
 for section in linkedlist.iter(s.list) do
 	for line in linkedlist.iter(section.lines) do
-		lines[#lines+1] = line
+		if line.linetype == LineType.TEXT then table.insert(lines, { line.lnum, prefix .. line.str })
+		elseif line.linetype == LineType.REFERENCE then collectLines(line.str, lines, prefix .. line.prefix) end
 	end
 end
+
+@collect_recursively_lines+=
+local lines = {}
+collectLines(name, lines, "")
 
 @parse_variables+=
 local lineRefs = {}
@@ -474,19 +483,11 @@ vim.api.nvim_command("normal ggdG")
 local lnumtr = 0
 local jumpline = 1
 for _,line in ipairs(lines) do
-	local text
-	@get_line_text_from_line_text
-	@get_line_text_from_line_reference
+	local lnum, text = unpack(line)
 	@check_for_line_to_jump_to
 	vim.api.nvim_buf_set_lines(desiredbufnr, lnumtr, lnumtr, false, { text })
 	lnumtr = lnumtr + 1
 end
-
-@get_line_text_from_line_text+=
-if line.linetype == LineType.TEXT then text = line.str end
-
-@get_line_text_from_line_reference+=
-if line.linetype == LineType.REFERENCE then text = line.prefix .. "@" .. line.str end
 
 @setup_buffer+=
 vim.api.nvim_buf_set_keymap(0, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
@@ -501,7 +502,8 @@ local curcol = vim.api.nvim_call_function("col", {"."})
 @save_lines_for_navigation+=
 navigationLines = {}
 for _,line in ipairs(lines) do 
-	navigationLines[#navigationLines+1] = { buf = originbuf, lnum = line.lnum }
+	local lnum, _ = unpack(line)
+	navigationLines[#navigationLines+1] = { buf = originbuf, lnum = lnum }
 end
 
 @functions+=
@@ -524,7 +526,7 @@ vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
 
 
 @check_for_line_to_jump_to+=
-if line.lnum == curnum then
+if lnum == curnum then
 	jumpline = lnumtr+1
 end
 
