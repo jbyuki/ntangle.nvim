@@ -578,18 +578,16 @@ local function collectSection()
 	local curcol = vim.api.nvim_call_function("col", {"."})
 	
 
-	if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
-		vim.api.nvim_command("edit transpose")
-		vim.api.nvim_command("setlocal buftype=nofile")
-		vim.api.nvim_command("setlocal bufhidden=hide")
-		vim.api.nvim_command("setlocal noswapfile")
-		
-		vim.api.nvim_buf_set_keymap(0, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
-		
+	local transpose_buf = vim.api.nvim_create_buf(false, true)
+	local old_ft = vim.api.nvim_buf_get_option(0, "ft")
+	if old_ft then
+		vim.api.nvim_buf_set_option(transpose_buf, "ft", old_ft)
 	end
+	-- vim.api.nvim_buf_set_name(transpose_buf, "transpose")
 	
-	local desiredbufnr = vim.api.nvim_call_function("bufnr", {"transpose"})
-	vim.api.nvim_command("buffer " .. desiredbufnr)
+	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
+	
+	vim.api.nvim_set_current_buf(transpose_buf)
 	
 	vim.api.nvim_command("normal ggdG")
 	
@@ -601,7 +599,7 @@ local function collectSection()
 			jumpline = lnumtr+1
 		end
 		
-		vim.api.nvim_buf_set_lines(desiredbufnr, lnumtr, lnumtr, false, { text })
+		vim.api.nvim_buf_set_lines(transpose_buf, lnumtr, lnumtr, false, { text })
 		lnumtr = lnumtr + 1
 	end
 	

@@ -406,6 +406,7 @@ local function collectSection()
 	@save_current_buffer
 
 	@create_buffer_if_not_existent
+	@keymap_transpose_buffer
 	@switch_to_buffer
 	@clear_buffer
 	@put_lines_in_buffer
@@ -462,19 +463,15 @@ local curnum = vim.api.nvim_call_function("line", {"."})
 local name = lineRefs[curnum]
 
 @create_buffer_if_not_existent+=
-if vim.api.nvim_call_function("bufexists", {"transpose"}) == 0 then
-	vim.api.nvim_command("edit transpose")
-	@setup_buffer
+local transpose_buf = vim.api.nvim_create_buf(false, true)
+local old_ft = vim.api.nvim_buf_get_option(0, "ft")
+if old_ft then
+	vim.api.nvim_buf_set_option(transpose_buf, "ft", old_ft)
 end
-
-@setup_buffer+=
-vim.api.nvim_command("setlocal buftype=nofile")
-vim.api.nvim_command("setlocal bufhidden=hide")
-vim.api.nvim_command("setlocal noswapfile")
+-- vim.api.nvim_buf_set_name(transpose_buf, "transpose")
 
 @switch_to_buffer+=
-local desiredbufnr = vim.api.nvim_call_function("bufnr", {"transpose"})
-vim.api.nvim_command("buffer " .. desiredbufnr)
+vim.api.nvim_set_current_buf(transpose_buf)
 
 @clear_buffer+=
 vim.api.nvim_command("normal ggdG")
@@ -485,12 +482,12 @@ local jumpline = 1
 for _,line in ipairs(lines) do
 	local lnum, text = unpack(line)
 	@check_for_line_to_jump_to
-	vim.api.nvim_buf_set_lines(desiredbufnr, lnumtr, lnumtr, false, { text })
+	vim.api.nvim_buf_set_lines(transpose_buf, lnumtr, lnumtr, false, { text })
 	lnumtr = lnumtr + 1
 end
 
-@setup_buffer+=
-vim.api.nvim_buf_set_keymap(0, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
+@keymap_transpose_buffer+=
+vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
 
 @parse_variables+=
 local nagivationLines = {}
