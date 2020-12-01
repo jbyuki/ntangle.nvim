@@ -238,6 +238,28 @@ local function tangle(filename)
 			end
 			
 			lines = {}
+			if string.match(fn, "lua$") then
+				local relname
+				if filename then
+					relname = filename
+				else
+					relname = vim.api.nvim_buf_get_name(0)
+				end
+				relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+				table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+			end
+			
+			if string.match(fn, "vim$") then
+				local relname
+				if filename then
+					relname = filename
+				else
+					relname = vim.api.nvim_buf_get_name(0)
+				end
+				relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+				table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+			end
+			
 			outputSections(lines, file, name, "")
 			local modified = false
 			do
@@ -415,7 +437,16 @@ local function goto(filename, linenum, root_pattern)
 		root = root_pattern
 	end
 	
-	local _,lnum = getlinenum(root, 1, linenum)
+	local startline = 1
+	if string.match(fn, "lua$") then
+		startline = startline + 1
+	end
+	
+	if string.match(fn, "vim$") then
+		startline = startline + 1
+	end
+	
+	local _,lnum = getlinenum(root, startline, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
 	
 	vim.api.nvim_command("normal " .. lnum .. "gg")
@@ -572,6 +603,13 @@ local function collectSection()
 	local name = lineRefs[curnum]
 	
 	local lines = {}
+	if string.match(name, "lua$") then
+		table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
+	end
+	
+	if string.match(name, "vim$") then
+		table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
+	end
 	collectLines(name, lines, "")
 	
 	local originbuf = vim.api.nvim_call_function("bufnr", {})
@@ -683,5 +721,6 @@ tangleAll = tangleAll,
 collectSection = collectSection,
 
 getRootFilename = getRootFilename,
+
 }
 

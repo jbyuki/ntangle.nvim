@@ -186,6 +186,7 @@ for name, section in pairs(sections) do
 		@if_star_replace_with_current_filename
 		@otherwise_put_node_name
 		lines = {}
+		@output_generated_header
 		outputSections(lines, file, name, "")
 		@check_file_is_modified
 		@if_modified_write_file
@@ -266,7 +267,9 @@ l.lnum = lnum
 local getlinenum
 
 @fake_output_until_linenum_readched+=
-local _,lnum = getlinenum(root, 1, linenum)
+local startline = 1
+@skip_some_lines_if_generated_header
+local _,lnum = getlinenum(root, startline, linenum)
 assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
 
 @functions+=
@@ -447,6 +450,7 @@ end
 
 @collect_recursively_lines+=
 local lines = {}
+@output_generated_header_fake
 collectLines(name, lines, "")
 
 @parse_variables+=
@@ -552,3 +556,44 @@ local line = vim.api.nvim_buf_get_lines(0, 0, 1, true)[1]
 
 @export_symbols+=
 getRootFilename = getRootFilename,
+
+@output_generated_header+=
+if string.match(fn, "lua$") then
+	local relname
+	if filename then
+		relname = filename
+	else
+		relname = vim.api.nvim_buf_get_name(0)
+	end
+	relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+	table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+end
+
+if string.match(fn, "vim$") then
+	local relname
+	if filename then
+		relname = filename
+	else
+		relname = vim.api.nvim_buf_get_name(0)
+	end
+	relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+	table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+end
+
+@skip_some_lines_if_generated_header+=
+if string.match(fn, "lua$") then
+	startline = startline + 1
+end
+
+if string.match(fn, "vim$") then
+	startline = startline + 1
+end
+
+@output_generated_header_fake+=
+if string.match(name, "lua$") then
+	table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
+end
+
+if string.match(name, "vim$") then
+	table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
+end
