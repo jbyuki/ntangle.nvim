@@ -268,6 +268,7 @@ local getlinenum
 
 @fake_output_until_linenum_readched+=
 local startline = 1
+@get_expanded_root_name
 @skip_some_lines_if_generated_header
 local _,lnum = getlinenum(root, startline, linenum)
 assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
@@ -450,6 +451,7 @@ end
 
 @collect_recursively_lines+=
 local lines = {}
+@get_expanded_name_from_current_buffer
 @output_generated_header_fake
 collectLines(name, lines, "")
 
@@ -588,12 +590,26 @@ end
 if string.match(fn, "vim$") then
 	startline = startline + 1
 end
+table.insert(events, "startline " .. startline)
 
 @output_generated_header_fake+=
-if string.match(name, "lua$") then
+if string.match(fn, "lua$") then
 	table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
 end
 
-if string.match(name, "vim$") then
+if string.match(fn, "vim$") then
 	table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
+end
+
+@get_expanded_root_name+=
+local fn = root
+if root == "*" then
+	fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+end
+
+@get_expanded_name_from_current_buffer+=
+local fn = name
+if name == "*" then
+	local filename = vim.api.nvim_buf_get_name(0)
+	fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 end

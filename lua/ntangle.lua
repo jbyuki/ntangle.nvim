@@ -1,3 +1,4 @@
+-- Generated from ntangle.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -438,6 +439,11 @@ local function goto(filename, linenum, root_pattern)
 	end
 	
 	local startline = 1
+	local fn = root
+	if root == "*" then
+		fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+	end
+	
 	if string.match(fn, "lua$") then
 		startline = startline + 1
 	end
@@ -445,6 +451,7 @@ local function goto(filename, linenum, root_pattern)
 	if string.match(fn, "vim$") then
 		startline = startline + 1
 	end
+	table.insert(events, "startline " .. startline)
 	
 	local _,lnum = getlinenum(root, startline, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
@@ -603,13 +610,19 @@ local function collectSection()
 	local name = lineRefs[curnum]
 	
 	local lines = {}
-	if string.match(name, "lua$") then
+	local fn = name
+	if name == "*" then
+		local filename = vim.api.nvim_buf_get_name(0)
+		fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+	end
+	if string.match(fn, "lua$") then
 		table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
 	end
 	
-	if string.match(name, "vim$") then
+	if string.match(fn, "vim$") then
 		table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
 	end
+	
 	collectLines(name, lines, "")
 	
 	local originbuf = vim.api.nvim_call_function("bufnr", {})
