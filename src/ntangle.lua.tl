@@ -436,16 +436,22 @@ if not s then return end
 local collectLines
 
 @functions+=
-function collectLines(name, lines, prefix)
+function collectLines(name, lines, prefix, curnum)
+	local jumpline
 	@check_if_section_is_present
 	@collect_every_line_in_section
+	return jumpline
 end
 
 @collect_every_line_in_section+=
 for section in linkedlist.iter(s.list) do
 	for line in linkedlist.iter(section.lines) do
+		if line.lnum == curnum then jumpline = #lines+1 end
+
 		if line.linetype == LineType.TEXT then table.insert(lines, { line.lnum, prefix .. line.str })
-		elseif line.linetype == LineType.REFERENCE then collectLines(line.str, lines, prefix .. line.prefix) end
+		elseif line.linetype == LineType.REFERENCE then 
+			jumpline = collectLines(line.str, lines, prefix .. line.prefix, curnum) or jumpline
+		end
 	end
 end
 
@@ -453,7 +459,7 @@ end
 local lines = {}
 @get_expanded_name_from_current_buffer
 @output_generated_header_fake
-collectLines(name, lines, "")
+local jumpline = collectLines(name, lines, "", curnum)
 
 @parse_variables+=
 local lineRefs = {}
@@ -484,10 +490,8 @@ vim.api.nvim_command("normal ggdG")
 
 @put_lines_in_buffer+=
 local lnumtr = 0
-local jumpline = 1
 for _,line in ipairs(lines) do
 	local lnum, text = unpack(line)
-	@check_for_line_to_jump_to
 	vim.api.nvim_buf_set_lines(transpose_buf, lnumtr, lnumtr, false, { text })
 	lnumtr = lnumtr + 1
 end
@@ -527,14 +531,10 @@ vim.api.nvim_command("buffer " .. nav.buf)
 @jump_to_linenumber+=
 vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
 
-
-@check_for_line_to_jump_to+=
-if lnum == curnum then
-	jumpline = lnumtr+1
-end
-
 @jump_to_lines_in_transpose_buffer+=
-vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+if jumpline then
+	vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+end
 
 @remove_last_line_in_buffer+=
 vim.api.nvim_command("normal Gddgg")

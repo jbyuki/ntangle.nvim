@@ -623,7 +623,7 @@ local function collectSection()
 		table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
 	end
 	
-	collectLines(name, lines, "")
+	local jumpline = collectLines(name, lines, "", curnum)
 	
 	local originbuf = vim.api.nvim_call_function("bufnr", {})
 	local curcol = vim.api.nvim_call_function("col", {"."})
@@ -643,13 +643,8 @@ local function collectSection()
 	vim.api.nvim_command("normal ggdG")
 	
 	local lnumtr = 0
-	local jumpline = 1
 	for _,line in ipairs(lines) do
 		local lnum, text = unpack(line)
-		if lnum == curnum then
-			jumpline = lnumtr+1
-		end
-		
 		vim.api.nvim_buf_set_lines(transpose_buf, lnumtr, lnumtr, false, { text })
 		lnumtr = lnumtr + 1
 	end
@@ -662,11 +657,14 @@ local function collectSection()
 		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = lnum }
 	end
 	
-	vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+	if jumpline then
+		vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+	end
 	
 end
 
-function collectLines(name, lines, prefix)
+function collectLines(name, lines, prefix, curnum)
+	local jumpline
 	local s
 	for n, section in pairs(sections) do
 		if n == name then
@@ -678,11 +676,16 @@ function collectLines(name, lines, prefix)
 	
 	for section in linkedlist.iter(s.list) do
 		for line in linkedlist.iter(section.lines) do
+			if line.lnum == curnum then jumpline = #lines+1 end
+	
 			if line.linetype == LineType.TEXT then table.insert(lines, { line.lnum, prefix .. line.str })
-			elseif line.linetype == LineType.REFERENCE then collectLines(line.str, lines, prefix .. line.prefix) end
+			elseif line.linetype == LineType.REFERENCE then 
+				jumpline = collectLines(line.str, lines, prefix .. line.prefix, curnum) or jumpline
+			end
 		end
 	end
 	
+	return jumpline
 end
 
 function navigateTo()
@@ -693,7 +696,6 @@ function navigateTo()
 	vim.api.nvim_command("buffer " .. nav.buf)
 	
 	vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
-	
 	
 end
 
