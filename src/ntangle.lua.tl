@@ -457,6 +457,7 @@ end
 
 @collect_recursively_lines+=
 local lines = {}
+@output_parent_nodes
 @get_expanded_name_from_current_buffer
 @output_generated_header_fake
 local jumpline = collectLines(name, lines, "", curnum)
@@ -613,3 +614,5 @@ if name == "*" then
 	local filename = vim.api.nvim_buf_get_name(0)
 	fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 end
+
+@output_parent_nodes+=
