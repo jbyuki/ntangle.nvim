@@ -63,3 +63,11 @@ command! TangleAll call SaveTangleAll()
 
 @register_commands+=
 command! TangleCollect call v:lua.ntangle.collectSection()
+
+@functions+=
+function! TangleShowErrors()
+	call v:lua.ntangle.show_errors(expand("%:p"))
+endfunction
+
+@register_commands+=
+command! TangleFix call TangleShowErrors()

@@ -25,6 +25,10 @@ local toluapat
 
 local collectLines
 
+local visitSections
+
+local searchOrphans
+
 local function tangle(filename)
 	sections = {}
 	curSection = nil
@@ -615,6 +619,7 @@ local function collectSection()
 		local filename = vim.api.nvim_buf_get_name(0)
 		fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 	end
+	
 	if string.match(fn, "lua$") then
 		table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
 	end
@@ -726,6 +731,181 @@ local function getRootFilename()
 	return fn
 end
 
+local function show_errors(filename)
+	sections = {}
+	curSection = nil
+	
+	lineRefs = {}
+	
+	lnum = 1
+	for line in io.lines(filename) do
+		if string.match(line, "^%s*@@") then
+			local hasSection = false
+			if sections[name] then
+				hasSection = true
+			end
+			
+			if hasSection then
+				local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+				local text = pre .. "@" .. post
+				local l = { 
+					linetype = LineType.TEXT, 
+					str = text 
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			end
+		
+		elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+			
+			local section = { linetype = LineType.SECTION, str = name, lines = {}}
+			
+			if op == '+=' or op == '-=' then
+				if sections[name] then
+					if op == '+=' then
+						linkedlist.push_back(sections[name].list, section)
+						
+					elseif op == '-=' then
+						linkedlist.push_front(sections[name].list, section)
+						
+					end
+				else
+					sections[name] = { root = false, list = {} }
+					
+					linkedlist.push_back(sections[name].list, section)
+					
+				end
+			
+			else 
+				sections[name] = { root = true, list = {} }
+				
+				linkedlist.push_back(sections[name].list, section)
+				
+			end
+			
+			curSection = section
+			
+		
+		elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+			local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+			if name == nil then
+				print(line)
+			end
+			
+			-- @check_that_sections_is_not_empty
+			local l = { 
+				linetype = LineType.REFERENCE, 
+				str = name,
+				prefix = prefix
+			}
+			
+			l.lnum = lnum
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		
+		else
+			if sections[name] then
+				hasSection = true
+			end
+			
+			local l = { 
+				linetype = LineType.TEXT, 
+				str = line 
+			}
+			
+			l.lnum = lnum
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		end
+		
+		lnum = lnum+1;
+	end
+	
+	local visited, notdefined = {}, {}
+	for name, section in pairs(sections) do
+		if section.root then
+			visitSections(visited, notdefined, name, 0)
+		end
+	end
+	
+	local qflist = {}
+	for name, lnum in pairs(notdefined) do
+		table.insert(qflist, {
+			filename = filename,
+			lnum = lnum,
+			text = name .. " is empty",
+			type = "W",
+		})
+	end
+	
+	local orphans = {}
+	for name, section in pairs(sections) do
+		if not section.root then
+			searchOrphans(name, visited, orphans, 0)
+		end
+	end
+	
+	for name, lnum in pairs(orphans) do
+		table.insert(qflist, {
+			filename = filename,
+			lnum = lnum,
+			text = name .. " is an orphan section",
+			type = "W",
+		})
+	end
+	
+	vim.fn.setqflist(qflist, "r")
+end
+
+function visitSections(visited, notdefined, name, lnum) 
+	if visited[name] then
+		return
+	end
+	
+	if not sections[name] then
+		notdefined[name] = lnum
+		return
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.REFERENCE then
+				visitSections(visited, notdefined, line.str, line.lnum)
+			end
+			
+		end
+	end
+	visited[name] = true
+end
+
+function searchOrphans(name, visited, orphans, lnum) 
+	if not sections[name] then
+		return
+	end
+	
+	if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
+		orphans[name] = lnum
+		local dummy = {}
+		visitSections(visited, dummy, name, 0)
+		return
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.REFERENCE then
+				searchOrphans(line.str, visited, orphans, line.lnum)
+			end
+			
+		end
+	end
+end
+
 return {
 tangle = tangle,
 
@@ -736,6 +916,8 @@ tangleAll = tangleAll,
 collectSection = collectSection,
 
 getRootFilename = getRootFilename,
+
+show_errors = show_errors,
 
 }
 

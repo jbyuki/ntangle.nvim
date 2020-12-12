@@ -615,4 +615,119 @@ if name == "*" then
 	fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 end
 
-@output_parent_nodes+=
+@functions+=
+local function show_errors(filename)
+	@clear_sections
+	@read_file_line_by_line
+	@from_every_root_node_mark_visited_sections
+	local qflist = {}
+	@output_undefined_section_references
+	@search_ophan_sections
+	@output_orphan_sections
+	@set_qflist_window
+end
+
+@export_symbols+=
+show_errors = show_errors,
+
+@from_every_root_node_mark_visited_sections+=
+local visited, notdefined = {}, {}
+for name, section in pairs(sections) do
+	if section.root then
+		visitSections(visited, notdefined, name, 0)
+	end
+end
+
+@declare_functions+=
+local visitSections
+
+@functions+=
+function visitSections(visited, notdefined, name, lnum) 
+	@if_already_visited_skip
+	@if_not_defined_add_and_skip
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			@if_reference_recursively_visit
+		end
+	end
+	visited[name] = true
+end
+
+@if_already_visited_skip+=
+if visited[name] then
+	return
+end
+
+@if_not_defined_add_and_skip+=
+if not sections[name] then
+	notdefined[name] = lnum
+	return
+end
+
+@if_reference_recursively_visit+=
+if line.linetype == LineType.REFERENCE then
+	visitSections(visited, notdefined, line.str, line.lnum)
+end
+
+@output_undefined_section_references+=
+for name, lnum in pairs(notdefined) do
+	table.insert(qflist, {
+		filename = filename,
+		lnum = lnum,
+		text = name .. " is empty",
+		type = "W",
+	})
+end
+
+@declare_functions+=
+local searchOrphans
+
+@functions+=
+function searchOrphans(name, visited, orphans, lnum) 
+	@if_not_section_skip
+	@if_not_visited_set_as_orphan_visited_child_and_quit
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			@if_reference_go_further_for_orphans
+		end
+	end
+end
+
+@if_not_visited_set_as_orphan_visited_child_and_quit+=
+if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
+	orphans[name] = lnum
+	local dummy = {}
+	visitSections(visited, dummy, name, 0)
+	return
+end
+
+@if_not_section_skip+=
+if not sections[name] then
+	return
+end
+
+@if_reference_go_further_for_orphans+=
+if line.linetype == LineType.REFERENCE then
+	searchOrphans(line.str, visited, orphans, line.lnum)
+end
+
+@search_ophan_sections+=
+local orphans = {}
+for name, section in pairs(sections) do
+	if not section.root then
+		searchOrphans(name, visited, orphans, 0)
+	end
+end
+
+@output_orphan_sections+=
+for name, lnum in pairs(orphans) do
+	table.insert(qflist, {
+		filename = filename,
+		lnum = lnum,
+		text = name .. " is an orphan section",
+		type = "W",
+	})
+end
+
+@set_qflist_window+=
+vim.fn.setqflist(qflist, "r")

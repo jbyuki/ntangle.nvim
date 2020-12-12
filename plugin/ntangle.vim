@@ -1,3 +1,4 @@
+" Generated from ntangle.vim.tl using ntangle.nvim
 let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
@@ -30,6 +31,10 @@ function! SaveTangleAll()
 	call v:lua.ntangle.tangleAll()
 endfunction
 
+function! TangleShowErrors()
+	call v:lua.ntangle.show_errors(expand("%:p"))
+endfunction
+
 autocmd BufWrite *.tl call SaveTangle()
 
 lua ntangle = require("ntangle")
@@ -43,4 +48,6 @@ command! TangleBuildCache call v:lua.buildcache.build(fnamemodify("~/tangle_cach
 command! TangleAll call SaveTangleAll()
 
 command! TangleCollect call v:lua.ntangle.collectSection()
+
+command! TangleFix call TangleShowErrors()
 
