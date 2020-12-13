@@ -591,7 +591,6 @@ end
 if string.match(fn, "vim$") then
 	startline = startline + 1
 end
-table.insert(events, "startline " .. startline)
 
 @output_generated_header_fake+=
 if string.match(fn, "lua$") then

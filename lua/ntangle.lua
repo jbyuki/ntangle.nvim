@@ -455,7 +455,6 @@ local function goto(filename, linenum, root_pattern)
 	if string.match(fn, "vim$") then
 		startline = startline + 1
 	end
-	table.insert(events, "startline " .. startline)
 	
 	local _,lnum = getlinenum(root, startline, linenum)
 	assert(lnum, "Could not go to line " .. linenum .. " in " .. root)
