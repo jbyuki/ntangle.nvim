@@ -17,6 +17,8 @@ local lineRefs = {}
 
 local nagivationLines = {}
 
+local todos = {}
+
 local outputSections
 
 local getlinenum
@@ -860,6 +862,7 @@ local function show_errors(filename)
 	end
 	
 	vim.fn.setqflist(qflist, "r")
+	
 end
 
 function visitSections(visited, notdefined, name, lnum) 
@@ -905,6 +908,178 @@ function searchOrphans(name, visited, orphans, lnum)
 	end
 end
 
+local function show_todo(buf)
+	local todobuf = vim.api.nvim_create_buf(false, true)
+	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
+	
+	local popup = {
+		width = 30,
+		height = 10,
+		margin_up = 1,
+		margin_right = 2,
+	}
+	
+	local opts = {
+		relative = "win",
+		width = popup.width,
+		height = popup.height,
+		col = w - popup.width - popup.margin_right,
+		row =  popup.margin_up,
+		style = 'minimal'
+	}
+	
+	if todos[buf] then
+		vim.api.nvim_win_close(todos[buf], true)
+	end
+	todos[buf] = vim.api.nvim_open_win(todobuf, 0, opts)
+	vim.api.nvim_command("wincmd p")
+	
+	local hi_ns = vim.api.nvim_create_namespace("")
+	
+	vim.api.nvim_buf_attach(buf, false, { on_lines = function(...)
+		vim.schedule(function()
+			sections = {}
+			curSection = nil
+			
+			lineRefs = {}
+			
+			vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
+			lnum = 1
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+			for _,line in ipairs(lines) do
+				if string.match(line, "^%s*@@") then
+					local hasSection = false
+					if sections[name] then
+						hasSection = true
+					end
+					
+					if hasSection then
+						local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+						local text = pre .. "@" .. post
+						local l = { 
+							linetype = LineType.TEXT, 
+							str = text 
+						}
+						
+						l.lnum = lnum
+						
+						linkedlist.push_back(curSection.lines, l)
+						
+					end
+				
+				elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+					local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+					
+					local section = { linetype = LineType.SECTION, str = name, lines = {}}
+					
+					if op == '+=' or op == '-=' then
+						if sections[name] then
+							if op == '+=' then
+								linkedlist.push_back(sections[name].list, section)
+								
+							elseif op == '-=' then
+								linkedlist.push_front(sections[name].list, section)
+								
+							end
+						else
+							sections[name] = { root = false, list = {} }
+							
+							linkedlist.push_back(sections[name].list, section)
+							
+						end
+					
+					else 
+						sections[name] = { root = true, list = {} }
+						
+						linkedlist.push_back(sections[name].list, section)
+						
+					end
+					
+					curSection = section
+					
+				
+				elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+					local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+					if name == nil then
+						print(line)
+					end
+					
+					-- @check_that_sections_is_not_empty
+					local l = { 
+						linetype = LineType.REFERENCE, 
+						str = name,
+						prefix = prefix
+					}
+					
+					l.lnum = lnum
+					
+					linkedlist.push_back(curSection.lines, l)
+					
+				
+				else
+					if sections[name] then
+						hasSection = true
+					end
+					
+					local l = { 
+						linetype = LineType.TEXT, 
+						str = line 
+					}
+					
+					l.lnum = lnum
+					
+					linkedlist.push_back(curSection.lines, l)
+					
+				end
+				
+				lineRefs[lnum] = curSection.str
+				
+				lnum = lnum+1;
+			end
+			
+			local visited, notdefined = {}, {}
+			for name, section in pairs(sections) do
+				if section.root then
+					visitSections(visited, notdefined, name, 0)
+				end
+			end
+			
+			local undefined = {}
+			for name, lnum in pairs(notdefined) do
+				table.insert(undefined, name)
+			end
+			table.sort(undefined, function(a, b) return notdefined[a] > notdefined[b] end)
+			
+			if #undefined == 0 then
+				vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, { "Nothing :)" })
+			else
+				vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, undefined)
+				for i=0,#undefined-1 do
+					vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", i, 0, -1)
+				end
+				
+				local remaining = {
+					#undefined .. " todo",
+					"",
+				}
+				vim.api.nvim_buf_set_lines(todobuf, 0, 0, true, remaining)
+				vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
+				
+			end
+			
+		end)
+	end})
+end
+
+local function close_todo(buf)
+	if todos[buf] then
+		vim.api.nvim_win_close(todos[buf], true)
+		todos[buf] = nil
+	end
+	
+	
+end
+
 return {
 tangle = tangle,
 
@@ -917,6 +1092,10 @@ collectSection = collectSection,
 getRootFilename = getRootFilename,
 
 show_errors = show_errors,
+
+show_todo = show_todo,
+
+close_todo = close_todo,
 
 }
 

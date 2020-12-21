@@ -71,3 +71,11 @@ endfunction
 
 @register_commands+=
 command! TangleFix call TangleShowErrors()
+
+@functions+=
+function! TangleShowTodo()
+	call v:lua.ntangle.show_todo(bufnr("%"))
+endfunction
+
+@register_commands+=
+command! TangleShowTodo call TangleShowTodo()

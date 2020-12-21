@@ -35,6 +35,10 @@ function! TangleShowErrors()
 	call v:lua.ntangle.show_errors(expand("%:p"))
 endfunction
 
+function! TangleShowTodo()
+	call v:lua.ntangle.show_todo(bufnr("%"))
+endfunction
+
 autocmd BufWrite *.tl call SaveTangle()
 
 lua ntangle = require("ntangle")
@@ -50,4 +54,6 @@ command! TangleAll call SaveTangleAll()
 command! TangleCollect call v:lua.ntangle.collectSection()
 
 command! TangleFix call TangleShowErrors()
+
+command! TangleShowTodo call TangleShowTodo()
 

@@ -730,3 +730,101 @@ end
 
 @set_qflist_window+=
 vim.fn.setqflist(qflist, "r")
+
+@functions+=
+local function show_todo(buf)
+	@create_todo_float_window
+	@setup_todo_float_window_syntax_highlighting
+	vim.api.nvim_buf_attach(buf, false, { on_lines = function(...)
+		vim.schedule(function()
+			@clear_sections
+			@clear_highlighting
+			@read_file_line_by_line_from_buffer
+			@from_every_root_node_mark_visited_sections
+			local undefined = {}
+			@collect_undefined_section_references
+			@update_todo_window
+		end)
+	end})
+end
+
+@export_symbols+=
+show_todo = show_todo,
+
+@functions+=
+local function close_todo(buf)
+	@close_todo_float_window
+end
+
+@export_symbols+=
+close_todo = close_todo,
+
+@parse_variables+=
+local todos = {}
+
+@create_todo_float_window+=
+local todobuf = vim.api.nvim_create_buf(false, true)
+local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
+
+local popup = {
+	width = 30,
+	height = 10,
+	margin_up = 1,
+	margin_right = 2,
+}
+
+local opts = {
+	relative = "win",
+	width = popup.width,
+	height = popup.height,
+	col = w - popup.width - popup.margin_right,
+	row =  popup.margin_up,
+	style = 'minimal'
+}
+
+if todos[buf] then
+	vim.api.nvim_win_close(todos[buf], true)
+end
+todos[buf] = vim.api.nvim_open_win(todobuf, 0, opts)
+vim.api.nvim_command("wincmd p")
+
+@close_todo_float_window+=
+if todos[buf] then
+	vim.api.nvim_win_close(todos[buf], true)
+	todos[buf] = nil
+end
+
+
+@collect_undefined_section_references+=
+for name, lnum in pairs(notdefined) do
+	table.insert(undefined, name)
+end
+table.sort(undefined, function(a, b) return notdefined[a] > notdefined[b] end)
+
+@update_todo_window+=
+if #undefined == 0 then
+	vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, { "Nothing :)" })
+else
+	vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, undefined)
+	@highlight_all_tasks
+	@show_remaining_in_todo
+end
+
+@show_remaining_in_todo+=
+local remaining = {
+	#undefined .. " todo",
+	"",
+}
+vim.api.nvim_buf_set_lines(todobuf, 0, 0, true, remaining)
+vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
+
+@highlight_all_tasks+=
+for i=0,#undefined-1 do
+	vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", i, 0, -1)
+end
+
+@setup_todo_float_window_syntax_highlighting+=
+local hi_ns = vim.api.nvim_create_namespace("")
+
+@clear_highlighting+=
+vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
