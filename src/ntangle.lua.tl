@@ -247,6 +247,7 @@ local function goto(filename, linenum, root_pattern)
 	@clear_sections
 	@read_file_line_by_line
 	@select_based_on_pattern
+	@if_star_replace_and_star_not_present_replace
 	@fake_output_until_linenum_readched
 	@go_to_line
 end
@@ -774,7 +775,7 @@ local popup = {
 }
 
 local opts = {
-	relative = "win",
+	relative = "editor",
 	width = popup.width,
 	height = popup.height,
 	col = w - popup.width - popup.margin_right,
@@ -828,3 +829,13 @@ local hi_ns = vim.api.nvim_create_namespace("")
 
 @clear_highlighting+=
 vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
+
+@if_star_replace_and_star_not_present_replace+=
+if root == "*" and not sections["*"] then
+	for name,section in pairs(sections) do
+		if section.root then
+			root = name
+			break
+		end
+	end
+end

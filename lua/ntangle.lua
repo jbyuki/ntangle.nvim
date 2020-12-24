@@ -444,6 +444,14 @@ local function goto(filename, linenum, root_pattern)
 		root = root_pattern
 	end
 	
+	if root == "*" and not sections["*"] then
+		for name,section in pairs(sections) do
+			if section.root then
+				root = name
+				break
+			end
+		end
+	end
 	local startline = 1
 	local fn = root
 	if root == "*" then
@@ -920,7 +928,7 @@ local function show_todo(buf)
 	}
 	
 	local opts = {
-		relative = "win",
+		relative = "editor",
 		width = popup.width,
 		height = popup.height,
 		col = w - popup.width - popup.margin_right,
@@ -944,6 +952,7 @@ local function show_todo(buf)
 			lineRefs = {}
 			
 			vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
+			
 			lnum = 1
 			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 			for _,line in ipairs(lines) do
