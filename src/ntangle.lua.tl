@@ -645,12 +645,12 @@ local visitSections
 function visitSections(visited, notdefined, name, lnum) 
 	@if_already_visited_skip
 	@if_not_defined_add_and_skip
+	visited[name] = true
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			@if_reference_recursively_visit
 		end
 	end
-	visited[name] = true
 end
 
 @if_already_visited_skip+=

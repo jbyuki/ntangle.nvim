@@ -883,6 +883,7 @@ function visitSections(visited, notdefined, name, lnum)
 		return
 	end
 	
+	visited[name] = true
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			if line.linetype == LineType.REFERENCE then
@@ -891,7 +892,6 @@ function visitSections(visited, notdefined, name, lnum)
 			
 		end
 	end
-	visited[name] = true
 end
 
 function searchOrphans(name, visited, orphans, lnum) 
