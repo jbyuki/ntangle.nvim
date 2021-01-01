@@ -97,7 +97,6 @@ sections[name] = { root = false, list = {} }
 else 
 	@create_section_linked_list_root
 	@add_back_to_section
-	@add_to_root_sections
 end
 
 @create_section_linked_list_root+=
@@ -458,7 +457,6 @@ end
 
 @collect_recursively_lines+=
 local lines = {}
-@output_parent_nodes
 @get_expanded_name_from_current_buffer
 @output_generated_header_fake
 local jumpline = collectLines(name, lines, "", curnum)
@@ -733,11 +731,11 @@ end
 vim.fn.setqflist(qflist, "r")
 
 @functions+=
-local function show_todo(buf)
-	@create_todo_float_window
-	@create_todo_float_window_border_window
-	@put_todo_text_on_top
-	@setup_todo_float_window_syntax_highlighting
+local function show_storage(buf)
+	@create_storage_float_window
+	@create_storage_float_window_border_window
+	@put_storage_text_on_top
+	@setup_storage_float_window_syntax_highlighting
 	vim.api.nvim_buf_attach(buf, false, { on_lines = function(...)
 		vim.schedule(function()
 			@clear_sections
@@ -746,30 +744,30 @@ local function show_todo(buf)
 			@from_every_root_node_mark_visited_sections
 			local undefined = {}
 			@collect_undefined_section_references
-			@update_todo_window
+			@update_storage_window
 		end)
 	end})
 
-	todos[buf] = {}
-	@save_todos_info_for_buf
+	storages[buf] = {}
+	@save_storages_info_for_buf
 end
 
 @export_symbols+=
-show_todo = show_todo,
+show_storage = show_storage,
 
 @functions+=
-local function close_todo()
-	@close_todo_float_window
+local function close_storage()
+	@close_storage_float_window
 end
 
 @export_symbols+=
-close_todo = close_todo,
+close_storage = close_storage,
 
 @parse_variables+=
-local todos = {}
+local storages = {}
 
-@create_todo_float_window+=
-local todobuf = vim.api.nvim_create_buf(false, true)
+@create_storage_float_window+=
+local storagebuf = vim.api.nvim_create_buf(false, true)
 local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
 
 local popup = {
@@ -789,20 +787,20 @@ local opts = {
 	style = 'minimal'
 }
 
-if todos[buf] then
-	vim.api.nvim_win_close(todos[buf].win, true)
+if storages[buf] then
+	vim.api.nvim_win_close(storages[buf].win, true)
 end
-local todowin = vim.api.nvim_open_win(todobuf, false, opts)
+local storagewin = vim.api.nvim_open_win(storagebuf, false, opts)
 
-@save_todos_info_for_buf+=
-todos[buf].win = todowin
+@save_storages_info_for_buf+=
+storages[buf].win = storagewin
 
-@close_todo_float_window+=
+@close_storage_float_window+=
 local buf = vim.api.nvim_get_current_buf()
-if todos[buf] then
-	vim.api.nvim_win_close(todos[buf].win, true)
+if storages[buf] then
+	vim.api.nvim_win_close(storages[buf].win, true)
 	@close_border_window
-	todos[buf] = nil
+	storages[buf] = nil
 end
 
 
@@ -810,35 +808,42 @@ end
 for name, lnum in pairs(notdefined) do
 	table.insert(undefined, name)
 end
-table.sort(undefined, function(a, b) return notdefined[a] > notdefined[b] end)
+table.sort(undefined, function(a, b) return notdefined[a] < notdefined[b] end)
 
-@update_todo_window+=
-if #undefined == 0 then
-	vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, { "Nothing :)" })
-else
-	vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, undefined)
-	@highlight_all_tasks
-	@show_remaining_in_todo
+@update_storage_window+=
+@format_tasks
+vim.api.nvim_buf_set_lines(storagebuf, 0, -1, true, tasks)
+@highlight_all_tasks
+@show_remaining_in_storage
+
+@parse_variables+=
+local task_prefix = "→ "
+
+@format_tasks+=
+local tasks = {}
+for _, el in ipairs(undefined) do
+	table.insert(tasks, task_prefix .. el)
 end
 
-@show_remaining_in_todo+=
+@show_remaining_in_storage+=
 local remaining = {
-	#undefined .. " todo",
+	"Storage",
 	"",
 }
-vim.api.nvim_buf_set_lines(todobuf, 0, 0, true, remaining)
-vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
+
+vim.api.nvim_buf_set_lines(storagebuf, 0, 0, true, remaining)
+-- vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
 
 @highlight_all_tasks+=
 for i=0,#undefined-1 do
-	vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", i, 0, -1)
+	vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", i, string.len(task_prefix), -1)
 end
 
-@setup_todo_float_window_syntax_highlighting+=
+@setup_storage_float_window_syntax_highlighting+=
 local hi_ns = vim.api.nvim_create_namespace("")
 
 @clear_highlighting+=
-vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
+vim.api.nvim_buf_clear_namespace(storagebuf, hi_ns, 0, -1)
 
 @if_star_replace_and_star_not_present_replace+=
 if root == "*" and not sections["*"] then
@@ -850,7 +855,7 @@ if root == "*" and not sections["*"] then
 	end
 end
 
-@create_todo_float_window_border_window+=
+@create_storage_float_window_border_window+=
 local borderbuf = vim.api.nvim_create_buf(false, true)
 
 local border_opts = {
@@ -865,17 +870,17 @@ local border_opts = {
 
 @fill_buffer_with_border_characters
 
-if todos[buf] then
-	vim.api.nvim_win_close(todos[buf].borderwin, true)
+if storages[buf] then
+	vim.api.nvim_win_close(storages[buf].borderwin, true)
 end
 
 local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 
-@save_todos_info_for_buf+=
-todos[buf].borderwin = borderwin
+@save_storages_info_for_buf+=
+storages[buf].borderwin = borderwin
 
 @close_border_window+=
-vim.api.nvim_win_close(todos[buf].borderwin, true)
+vim.api.nvim_win_close(storages[buf].borderwin, true)
 
 @fill_buffer_with_border_characters+=
 local border_text = {}
@@ -926,13 +931,13 @@ for x=2,border_opts.width-1 do
 end
 line = line .. border_chars.right
 
-@put_todo_text_on_top+=
+@put_storage_text_on_top+=
 local parent_win = vim.api.nvim_get_current_win()
-vim.api.nvim_set_current_win(todowin)
+vim.api.nvim_set_current_win(storagewin)
 vim.api.nvim_set_current_win(parent_win)
 
-@create_todo_float_window+=
-vim.api.nvim_win_set_option(todowin, "winblend", 30)
+@create_storage_float_window+=
+vim.api.nvim_win_set_option(storagewin, "winblend", 30)
 
-@create_todo_float_window_border_window+=
+@create_storage_float_window_border_window+=
 vim.api.nvim_win_set_option(borderwin, "winblend", 30)

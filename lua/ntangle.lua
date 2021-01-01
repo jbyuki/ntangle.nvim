@@ -17,7 +17,9 @@ local lineRefs = {}
 
 local nagivationLines = {}
 
-local todos = {}
+local storages = {}
+
+local task_prefix = "→ "
 
 local outputSections
 
@@ -917,8 +919,8 @@ function searchOrphans(name, visited, orphans, lnum)
 	end
 end
 
-local function show_todo(buf)
-	local todobuf = vim.api.nvim_create_buf(false, true)
+local function show_storage(buf)
+	local storagebuf = vim.api.nvim_create_buf(false, true)
 	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
 	
 	local popup = {
@@ -938,12 +940,12 @@ local function show_todo(buf)
 		style = 'minimal'
 	}
 	
-	if todos[buf] then
-		vim.api.nvim_win_close(todos[buf].win, true)
+	if storages[buf] then
+		vim.api.nvim_win_close(storages[buf].win, true)
 	end
-	local todowin = vim.api.nvim_open_win(todobuf, false, opts)
+	local storagewin = vim.api.nvim_open_win(storagebuf, false, opts)
 	
-	vim.api.nvim_win_set_option(todowin, "winblend", 30)
+	vim.api.nvim_win_set_option(storagewin, "winblend", 30)
 	
 	local borderbuf = vim.api.nvim_create_buf(false, true)
 	
@@ -1000,15 +1002,15 @@ local function show_todo(buf)
 	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 	
 	
-	if todos[buf] then
-		vim.api.nvim_win_close(todos[buf].borderwin, true)
+	if storages[buf] then
+		vim.api.nvim_win_close(storages[buf].borderwin, true)
 	end
 	
 	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 	
 	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 	local parent_win = vim.api.nvim_get_current_win()
-	vim.api.nvim_set_current_win(todowin)
+	vim.api.nvim_set_current_win(storagewin)
 	vim.api.nvim_set_current_win(parent_win)
 	
 	local hi_ns = vim.api.nvim_create_namespace("")
@@ -1020,7 +1022,7 @@ local function show_todo(buf)
 			
 			lineRefs = {}
 			
-			vim.api.nvim_buf_clear_namespace(todobuf, hi_ns, 0, -1)
+			vim.api.nvim_buf_clear_namespace(storagebuf, hi_ns, 0, -1)
 			
 			lnum = 1
 			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -1126,42 +1128,44 @@ local function show_todo(buf)
 			for name, lnum in pairs(notdefined) do
 				table.insert(undefined, name)
 			end
-			table.sort(undefined, function(a, b) return notdefined[a] > notdefined[b] end)
+			table.sort(undefined, function(a, b) return notdefined[a] < notdefined[b] end)
 			
-			if #undefined == 0 then
-				vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, { "Nothing :)" })
-			else
-				vim.api.nvim_buf_set_lines(todobuf, 0, -1, true, undefined)
-				for i=0,#undefined-1 do
-					vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", i, 0, -1)
-				end
-				
-				local remaining = {
-					#undefined .. " todo",
-					"",
-				}
-				vim.api.nvim_buf_set_lines(todobuf, 0, 0, true, remaining)
-				vim.api.nvim_buf_add_highlight(todobuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
-				
+			local tasks = {}
+			for _, el in ipairs(undefined) do
+				table.insert(tasks, task_prefix .. el)
 			end
+			
+			vim.api.nvim_buf_set_lines(storagebuf, 0, -1, true, tasks)
+			for i=0,#undefined-1 do
+				vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", i, string.len(task_prefix), -1)
+			end
+			
+			local remaining = {
+				"Storage",
+				"",
+			}
+			
+			vim.api.nvim_buf_set_lines(storagebuf, 0, 0, true, remaining)
+			-- vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
+			
 			
 		end)
 	end})
 
-	todos[buf] = {}
-	todos[buf].win = todowin
+	storages[buf] = {}
+	storages[buf].win = storagewin
 	
-	todos[buf].borderwin = borderwin
+	storages[buf].borderwin = borderwin
 	
 end
 
-local function close_todo()
+local function close_storage()
 	local buf = vim.api.nvim_get_current_buf()
-	if todos[buf] then
-		vim.api.nvim_win_close(todos[buf].win, true)
-		vim.api.nvim_win_close(todos[buf].borderwin, true)
+	if storages[buf] then
+		vim.api.nvim_win_close(storages[buf].win, true)
+		vim.api.nvim_win_close(storages[buf].borderwin, true)
 		
-		todos[buf] = nil
+		storages[buf] = nil
 	end
 	
 	
@@ -1180,9 +1184,9 @@ getRootFilename = getRootFilename,
 
 show_errors = show_errors,
 
-show_todo = show_todo,
+show_storage = show_storage,
 
-close_todo = close_todo,
+close_storage = close_storage,
 
 }
 
