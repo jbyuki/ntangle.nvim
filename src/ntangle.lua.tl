@@ -1,4 +1,4 @@
-@*=
+@../lua/ntangle.lua=
 @requires
 @parse_variables
 @declare_functions
@@ -735,6 +735,8 @@ vim.fn.setqflist(qflist, "r")
 @functions+=
 local function show_todo(buf)
 	@create_todo_float_window
+	@create_todo_float_window_border_window
+	@put_todo_text_on_top
 	@setup_todo_float_window_syntax_highlighting
 	vim.api.nvim_buf_attach(buf, false, { on_lines = function(...)
 		vim.schedule(function()
@@ -747,13 +749,16 @@ local function show_todo(buf)
 			@update_todo_window
 		end)
 	end})
+
+	todos[buf] = {}
+	@save_todos_info_for_buf
 end
 
 @export_symbols+=
 show_todo = show_todo,
 
 @functions+=
-local function close_todo(buf)
+local function close_todo()
 	@close_todo_float_window
 end
 
@@ -768,14 +773,15 @@ local todobuf = vim.api.nvim_create_buf(false, true)
 local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
 
 local popup = {
-	width = 30,
-	height = 10,
-	margin_up = 1,
-	margin_right = 2,
+	width = 40,
+	height = 15,
+	margin_up = 3,
+	margin_right = 6,
 }
 
 local opts = {
-	relative = "editor",
+	relative = "win",
+	win = vim.api.nvim_get_current_win(),
 	width = popup.width,
 	height = popup.height,
 	col = w - popup.width - popup.margin_right,
@@ -784,14 +790,18 @@ local opts = {
 }
 
 if todos[buf] then
-	vim.api.nvim_win_close(todos[buf], true)
+	vim.api.nvim_win_close(todos[buf].win, true)
 end
-todos[buf] = vim.api.nvim_open_win(todobuf, 0, opts)
-vim.api.nvim_command("wincmd p")
+local todowin = vim.api.nvim_open_win(todobuf, false, opts)
+
+@save_todos_info_for_buf+=
+todos[buf].win = todowin
 
 @close_todo_float_window+=
+local buf = vim.api.nvim_get_current_buf()
 if todos[buf] then
-	vim.api.nvim_win_close(todos[buf], true)
+	vim.api.nvim_win_close(todos[buf].win, true)
+	@close_border_window
 	todos[buf] = nil
 end
 
@@ -839,3 +849,90 @@ if root == "*" and not sections["*"] then
 		end
 	end
 end
+
+@create_todo_float_window_border_window+=
+local borderbuf = vim.api.nvim_create_buf(false, true)
+
+local border_opts = {
+	relative = "win",
+	win = vim.api.nvim_get_current_win(),
+	width = popup.width+2,
+	height = popup.height+2,
+	col = w - popup.width - popup.margin_right - 1,
+	row =  popup.margin_up - 1,
+	style = 'minimal'
+}
+
+@fill_buffer_with_border_characters
+
+if todos[buf] then
+	vim.api.nvim_win_close(todos[buf].borderwin, true)
+end
+
+local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+
+@save_todos_info_for_buf+=
+todos[buf].borderwin = borderwin
+
+@close_border_window+=
+vim.api.nvim_win_close(todos[buf].borderwin, true)
+
+@fill_buffer_with_border_characters+=
+local border_text = {}
+
+local border_chars = {
+	topleft  = '╭',
+	topright = '╮',
+	top      = '─',
+	left     = '│',
+	right    = '│',
+	botleft  = '╰',
+	botright = '╯',
+	bot      = '─',
+}
+
+for y=1,border_opts.height do
+	local line = ""
+	if y == 1 then
+		@create_border_top
+	elseif y == border_opts.height then
+		@create_border_bottom
+	else
+		@create_border_middle
+	end
+	table.insert(border_text, line)
+end
+
+vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+
+@create_border_top+=
+line = border_chars.topleft
+for x=2,border_opts.width-1 do
+	line = line .. border_chars.top
+end
+line = line .. border_chars.topright
+
+@create_border_bottom+=
+line = border_chars.botleft
+for x=2,border_opts.width-1 do
+	line = line .. border_chars.bot
+end
+line = line .. border_chars.botright
+
+@create_border_middle+=
+line = border_chars.left
+for x=2,border_opts.width-1 do
+	line = line .. " "
+end
+line = line .. border_chars.right
+
+@put_todo_text_on_top+=
+local parent_win = vim.api.nvim_get_current_win()
+vim.api.nvim_set_current_win(todowin)
+vim.api.nvim_set_current_win(parent_win)
+
+@create_todo_float_window+=
+vim.api.nvim_win_set_option(todowin, "winblend", 30)
+
+@create_todo_float_window_border_window+=
+vim.api.nvim_win_set_option(borderwin, "winblend", 30)
