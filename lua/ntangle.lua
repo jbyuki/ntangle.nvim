@@ -21,6 +21,8 @@ local storages = {}
 
 local task_prefix = "→ "
 
+local transpose_win
+
 local outputSections
 
 local getlinenum
@@ -653,6 +655,90 @@ local function collectSection()
 	end
 	-- vim.api.nvim_buf_set_name(transpose_buf, "transpose")
 	
+	local perc = 0.8
+	local win_width  = vim.api.nvim_win_get_width(0)
+	local win_height = vim.api.nvim_win_get_height(0)
+	local width = math.floor(perc*win_width)
+	local height = math.floor(perc*win_height)
+	
+	local opts = {
+		width = width,
+		height = height,
+		row = math.floor((win_height-height)/2),
+		col = math.floor((win_width-width)/2),
+		relative = "win",
+		win = vim.api.nvim_get_current_win(),
+	}
+	
+	transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+	
+	local borderbuf = vim.api.nvim_create_buf(false, true)
+	
+	local border_opts = {
+		relative = "win",
+		win = vim.api.nvim_get_current_win(),
+		width = opts.width+2,
+		height = opts.height+2,
+		col = opts.col-1,
+		row =  opts.row-1,
+		style = 'minimal'
+	}
+	
+	local border_title = "Transpose"
+	
+	local border_text = {}
+	
+	local border_chars = {
+		topleft  = '╭',
+		topright = '╮',
+		top      = '─',
+		left     = '│',
+		right    = '│',
+		botleft  = '╰',
+		botright = '╯',
+		bot      = '─',
+	}
+	
+	for y=1,border_opts.height do
+		local line = ""
+		if y == 1 then
+			line = border_chars.topleft .. border_chars.top
+			local titlelen = 0
+			if border_title then
+				line = line .. border_title
+				titlelen = vim.api.nvim_strwidth(border_title)
+			end
+			
+			for x=2+titlelen+1,border_opts.width-1 do
+				line = line .. border_chars.top
+			end
+			line = line .. border_chars.topright
+			
+		elseif y == border_opts.height then
+			line = border_chars.botleft
+			for x=2,border_opts.width-1 do
+				line = line .. border_chars.bot
+			end
+			line = line .. border_chars.botright
+			
+		else
+			line = border_chars.left
+			for x=2,border_opts.width-1 do
+				line = line .. " "
+			end
+			line = line .. border_chars.right
+			
+		end
+		table.insert(border_text, line)
+	end
+	
+	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+	
+	
+	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+	vim.api.nvim_set_current_win(transpose_win)
+	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+	
 	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
 	
 	vim.api.nvim_set_current_buf(transpose_buf)
@@ -710,8 +796,7 @@ function navigateTo()
 	local curcol = vim.api.nvim_call_function("col", {'.'})
 	local nav = navigationLines[curline]
 	
-	vim.api.nvim_command("buffer " .. nav.buf)
-	
+	vim.api.nvim_win_close(transpose_win, true)
 	vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
 	
 end
@@ -959,6 +1044,8 @@ local function show_storage(buf)
 		style = 'minimal'
 	}
 	
+	local border_title = "Storage"
+	
 	local border_text = {}
 	
 	local border_chars = {
@@ -975,8 +1062,14 @@ local function show_storage(buf)
 	for y=1,border_opts.height do
 		local line = ""
 		if y == 1 then
-			line = border_chars.topleft
-			for x=2,border_opts.width-1 do
+			line = border_chars.topleft .. border_chars.top
+			local titlelen = 0
+			if border_title then
+				line = line .. border_title
+				titlelen = vim.api.nvim_strwidth(border_title)
+			end
+			
+			for x=2+titlelen+1,border_opts.width-1 do
 				line = line .. border_chars.top
 			end
 			line = line .. border_chars.topright
@@ -1009,6 +1102,7 @@ local function show_storage(buf)
 	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 	
 	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
+	
 	local parent_win = vim.api.nvim_get_current_win()
 	vim.api.nvim_set_current_win(storagewin)
 	vim.api.nvim_set_current_win(parent_win)
@@ -1139,14 +1233,6 @@ local function show_storage(buf)
 			for i=0,#undefined-1 do
 				vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", i, string.len(task_prefix), -1)
 			end
-			
-			local remaining = {
-				"Storage",
-				"",
-			}
-			
-			vim.api.nvim_buf_set_lines(storagebuf, 0, 0, true, remaining)
-			-- vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
 			
 			
 		end)

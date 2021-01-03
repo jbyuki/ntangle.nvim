@@ -410,6 +410,9 @@ local function collectSection()
 	@save_current_buffer
 
 	@create_buffer_if_not_existent
+	@get_current_window_dimensions
+	@create_window_for_transpose
+	@create_border_around_transpose_window
 	@keymap_transpose_buffer
 	@switch_to_buffer
 	@clear_buffer
@@ -524,9 +527,6 @@ end
 local curline = vim.api.nvim_call_function("line", {'.'})
 local curcol = vim.api.nvim_call_function("col", {'.'})
 local nav = navigationLines[curline]
-
-@switch_to_back_to_buffer+=
-vim.api.nvim_command("buffer " .. nav.buf)
 
 @jump_to_linenumber+=
 vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
@@ -814,7 +814,6 @@ table.sort(undefined, function(a, b) return notdefined[a] < notdefined[b] end)
 @format_tasks
 vim.api.nvim_buf_set_lines(storagebuf, 0, -1, true, tasks)
 @highlight_all_tasks
-@show_remaining_in_storage
 
 @parse_variables+=
 local task_prefix = "→ "
@@ -824,15 +823,6 @@ local tasks = {}
 for _, el in ipairs(undefined) do
 	table.insert(tasks, task_prefix .. el)
 end
-
-@show_remaining_in_storage+=
-local remaining = {
-	"Storage",
-	"",
-}
-
-vim.api.nvim_buf_set_lines(storagebuf, 0, 0, true, remaining)
--- vim.api.nvim_buf_add_highlight(storagebuf, hi_ns, "Special", 0, 0, string.len(tostring(#undefined)))
 
 @highlight_all_tasks+=
 for i=0,#undefined-1 do
@@ -867,6 +857,8 @@ local border_opts = {
 	row =  popup.margin_up - 1,
 	style = 'minimal'
 }
+
+local border_title = "Storage"
 
 @fill_buffer_with_border_characters
 
@@ -911,8 +903,14 @@ end
 vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 
 @create_border_top+=
-line = border_chars.topleft
-for x=2,border_opts.width-1 do
+line = border_chars.topleft .. border_chars.top
+local titlelen = 0
+if border_title then
+	line = line .. border_title
+	titlelen = vim.api.nvim_strwidth(border_title)
+end
+
+for x=2+titlelen+1,border_opts.width-1 do
 	line = line .. border_chars.top
 end
 line = line .. border_chars.topright
@@ -941,3 +939,49 @@ vim.api.nvim_win_set_option(storagewin, "winblend", 30)
 
 @create_storage_float_window_border_window+=
 vim.api.nvim_win_set_option(borderwin, "winblend", 30)
+
+@get_current_window_dimensions+=
+local perc = 0.8
+local win_width  = vim.api.nvim_win_get_width(0)
+local win_height = vim.api.nvim_win_get_height(0)
+local width = math.floor(perc*win_width)
+local height = math.floor(perc*win_height)
+
+@create_window_for_transpose+=
+local opts = {
+	width = width,
+	height = height,
+	row = math.floor((win_height-height)/2),
+	col = math.floor((win_width-width)/2),
+	relative = "win",
+	win = vim.api.nvim_get_current_win(),
+}
+
+transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+
+@parse_variables+=
+local transpose_win
+
+@create_border_around_transpose_window+=
+local borderbuf = vim.api.nvim_create_buf(false, true)
+
+local border_opts = {
+	relative = "win",
+	win = vim.api.nvim_get_current_win(),
+	width = opts.width+2,
+	height = opts.height+2,
+	col = opts.col-1,
+	row =  opts.row-1,
+	style = 'minimal'
+}
+
+local border_title = "Transpose"
+
+@fill_buffer_with_border_characters
+
+local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+vim.api.nvim_set_current_win(transpose_win)
+vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+
+@switch_to_back_to_buffer+=
+vim.api.nvim_win_close(transpose_win, true)
