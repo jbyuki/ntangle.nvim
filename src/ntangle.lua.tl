@@ -7,20 +7,20 @@ return {
 @export_symbols
 }
 
-@functions+=
-local function tangle(filename)
-	@clear_sections
-	if filename then
-		@read_file_line_by_line
-	else
-		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-		@read_file_line_by_line_from_variable
-	end
-	@output_sections
-end
-
-@export_symbols+=
-tangle = tangle,
+-- @functions+=
+-- local function tangle(filename)
+-- 	@clear_sections
+-- 	if filename then
+-- 		@read_file_line_by_line
+-- 	else
+-- 		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+-- 		@read_file_line_by_line_from_variable
+-- 	end
+-- 	@output_sections
+-- end
+-- 
+-- @export_symbols+=
+-- tangle = tangle,
 
 @read_file_line_by_line+=
 lnum = 1
@@ -570,9 +570,7 @@ if string.match(fn, "lua$") then
 	end
 	relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
 	table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
-end
-
-if string.match(fn, "vim$") then
+elseif string.match(fn, "vim$") then
 	local relname
 	if filename then
 		relname = filename
@@ -595,9 +593,7 @@ end
 @output_generated_header_fake+=
 if string.match(fn, "lua$") then
 	table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
-end
-
-if string.match(fn, "vim$") then
+elseif string.match(fn, "vim$") then
 	table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
 end
 
@@ -1028,18 +1024,37 @@ vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. 
 vim.api.nvim_win_close(transpose_win, true)
 
 @functions+=
-local function tangleEx()
-	@read_buffer_line_by_line_and_separate_assemblies
+local function tangle(filename)
+	local assemblies = {}
+	if filename then
+		@read_file_line_by_line_and_separate_assemblies
+	else
+		@read_buffer_line_by_line_and_separate_assemblies
+	end
+
 	@foreach_assembly_write_out_assembly
 	@foreach_assembly_glob_and_asssemble_and_tangle
 	@if_there_is_an_unamed_assemble_just_tangle
 end
 
 @export_symbols+=
-tangleEx = tangleEx,
+tangle = tangle,
+
+@read_file_line_by_line_and_separate_assemblies+=
+local curassembly = "*"
+assemblies[curassembly] = {}
+
+for line in io.lines(filename) do
+	if string.match(line, "^@@%S*+=%s*$") then
+		@extract_assembly_name
+		@set_as_current_assembly
+	else
+		@add_line_to_current_assembly
+	end
+end
+
 
 @read_buffer_line_by_line_and_separate_assemblies+=
-local assemblies = {}
 local curassembly = "*"
 assemblies[curassembly] = {}
 
@@ -1074,7 +1089,10 @@ for name, lines in pairs(assemblies) do
 end
 
 @get_current_buffer_name_for_assembly_part+=
-local filename = vim.fn.expand("%:p")
+if not filename then
+	filename = vim.fn.expand("%:p")
+end
+
 local parendir = vim.fn.fnamemodify( filename, ":p:h" )
 local fn
 @if_star_replace_with_current_filename
@@ -1082,7 +1100,7 @@ local fn
 @add_assembly_part_suffix
 
 @add_assembly_part_suffix+=
-local fname = vim.fn.expand( "%:t:r:r" )
+local fname = vim.fn.fnamemodify( filename, ":t:r:r" )
 fn = fn .. "." .. fname .. ".tlpart"
 
 @open_file_for_assembly_part+=
@@ -1094,7 +1112,7 @@ for _, line in ipairs(lines) do
 end
 
 @foreach_assembly_glob_and_asssemble_and_tangle+=
-for name, _ in pairs(assemblies) do
+for name, lines in pairs(assemblies) do
 	if name ~= "*" and #lines > 0 then
 		@get_current_buffer_name_for_assembly_part
 		@glob_all_parts
@@ -1119,14 +1137,14 @@ for _, part in ipairs(parts) do
 end
 
 @output_sections_assembly+=
-local parendir = vim.api.nvim_call_function("fnamemodify", { assembled_fn, ":p:h" })
+local parendir = vim.fn.fnamemodify( assembled_fn, ":p:h" )
 for name, section in pairs(sections) do
 	if section.root then
 		local fn
 		@if_star_replace_assembled_filename
 		@otherwise_put_node_name_assembled
 		lines = {}
-		@output_generated_header
+		@output_generated_header_assembly
 		outputSections(lines, file, name, "")
 		@check_file_is_modified
 		@if_modified_write_file
@@ -1149,4 +1167,18 @@ if #assemblies["*"] > 0 then
 	@read_file_line_by_line_from_variable
 	local filename
 	@output_sections
+end
+
+@output_generated_header_assembly+=
+local parts_tails = {}
+for _, part in ipairs(parts) do
+	local fn = vim.fn.fnamemodify(part, ":t")
+	local particules = vim.split(fn, "%.")
+	table.insert(parts_tails, particules[#particules-1] .. "." .. particules[#particules-2] .. ".tl")
+end
+
+if string.match(fn, "lua$") then
+	table.insert(lines, "-- Generated from " .. table.concat(parts_tails, ", ") .. " using ntangle.nvim")
+elseif string.match(fn, "vim$") then
+	table.insert(lines, "\" Generated from " .. table.concat(parts_tails, ", ") .. " using ntangle.nvim")
 end

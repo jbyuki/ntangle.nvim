@@ -12,7 +12,7 @@ endif
 call execute("set filetype=" . lang)
 
 if lang == "vim"
-	syn cluster vimFuncBodyList	add=ntangleSection,ntangleSectionReference
+	syn cluster vimFuncBodyList	add=ntangleSection,ntangleAssembly,ntangleSectionReference
 endif
 
 if lang == "lua"
@@ -21,8 +21,8 @@ if lang == "lua"
 	hi def link luaNonError	Statement
 endif
 syntax match ntangleSection /^@[^[:space:]@]\+[+\-]\?=\s*$/
+syntax match ntangleAssembly /^@@[^[:space:]@]\++=\s*$/
 syntax match ntangleSectionReference /^\s*@[^=@[:space:]]\+\s*$/
 highlight link ntangleSectionReference Special
+highlight link ntangleAssembly IncSearch
 highlight link ntangleSection Special
-
-
