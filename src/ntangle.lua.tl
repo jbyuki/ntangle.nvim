@@ -13,7 +13,8 @@ local function tangle(filename)
 	if filename then
 		@read_file_line_by_line
 	else
-		@read_file_line_by_line_from_buffer
+		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		@read_file_line_by_line_from_variable
 	end
 	@output_sections
 end
@@ -31,9 +32,8 @@ for line in io.lines(filename) do
 	lnum = lnum+1;
 end
 
-@read_file_line_by_line_from_buffer+=
+@read_file_line_by_line_from_variable+=
 lnum = 1
-local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 for _,line in ipairs(lines) do
 	@check_if_line_escape_double_at
 	@check_if_line_is_section
@@ -404,7 +404,8 @@ end
 @functions+=
 local function collectSection()
 	@clear_sections
-	@read_file_line_by_line_from_buffer
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	@read_file_line_by_line_from_variable
 	@get_section_name_of_current_line
 	@collect_recursively_lines
 	@save_current_buffer
@@ -740,7 +741,8 @@ local function show_storage(buf)
 		vim.schedule(function()
 			@clear_sections
 			@clear_highlighting
-			@read_file_line_by_line_from_buffer
+			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+			@read_file_line_by_line_from_variable
 			@from_every_root_node_mark_visited_sections
 			local undefined = {}
 			@collect_undefined_section_references
@@ -859,7 +861,7 @@ local border_opts = {
 }
 
 local border_title = "Storage"
-
+local center_title = true
 @fill_buffer_with_border_characters
 
 if storages[buf] then
@@ -888,10 +890,25 @@ local border_chars = {
 	bot      = '─',
 }
 
+-- local border_chars = {
+	-- topleft  = '╔',
+	-- topright = '╗',
+	-- top      = '═',
+	-- left     = '║',
+	-- right    = '║',
+	-- botleft  = '╚',
+	-- botright = '╝',
+	-- bot      = '═',
+-- }
+
 for y=1,border_opts.height do
 	local line = ""
 	if y == 1 then
-		@create_border_top
+		if not center_title then
+			@create_border_top
+		else
+			@create_border_top_with_title_center
+		end
 	elseif y == border_opts.height then
 		@create_border_bottom
 	else
@@ -904,15 +921,39 @@ vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 
 @create_border_top+=
 line = border_chars.topleft .. border_chars.top
-local titlelen = 0
+local title_len = 0
 if border_title then
 	line = line .. border_title
-	titlelen = vim.api.nvim_strwidth(border_title)
+	title_len = vim.api.nvim_strwidth(border_title)
 end
 
-for x=2+titlelen+1,border_opts.width-1 do
+for x=2+title_len+1,border_opts.width-1 do
 	line = line .. border_chars.top
 end
+line = line .. border_chars.topright
+
+@create_border_top_with_title_center+=
+line = border_chars.topleft
+
+local title_len = 0
+if border_title then
+	title_len = vim.api.nvim_strwidth(border_title)
+end
+
+local pad_left = math.floor((border_opts.width-title_len)/2)
+
+for x=2,pad_left do
+	line = line .. border_chars.top
+end
+
+if border_title then
+	line = line .. border_title
+end
+
+for x=pad_left+title_len+1,border_opts.width-1 do
+	line = line .. border_chars.top
+end
+
 line = line .. border_chars.topright
 
 @create_border_bottom+=
@@ -976,7 +1017,7 @@ local border_opts = {
 }
 
 local border_title = "Transpose"
-
+local center_title = true
 @fill_buffer_with_border_characters
 
 local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
@@ -985,3 +1026,127 @@ vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. 
 
 @switch_to_back_to_buffer+=
 vim.api.nvim_win_close(transpose_win, true)
+
+@functions+=
+local function tangleEx()
+	@read_buffer_line_by_line_and_separate_assemblies
+	@foreach_assembly_write_out_assembly
+	@foreach_assembly_glob_and_asssemble_and_tangle
+	@if_there_is_an_unamed_assemble_just_tangle
+end
+
+@export_symbols+=
+tangleEx = tangleEx,
+
+@read_buffer_line_by_line_and_separate_assemblies+=
+local assemblies = {}
+local curassembly = "*"
+assemblies[curassembly] = {}
+
+local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+for _, line in ipairs(lines) do
+	if string.match(line, "^@@%S*+=%s*$") then
+		@extract_assembly_name
+		@set_as_current_assembly
+	else
+		@add_line_to_current_assembly
+	end
+end
+
+@extract_assembly_name+=
+local name = string.match(line, "^@@(%S*)+=%s*$")
+
+@set_as_current_assembly+=
+curassembly = name
+assemblies[curassembly] = assemblies[curassembly] or {}
+
+@add_line_to_current_assembly+=
+table.insert(assemblies[curassembly], line)
+
+@foreach_assembly_write_out_assembly+=
+for name, lines in pairs(assemblies) do
+	if name ~= "*" and #lines > 0 then
+		@get_current_buffer_name_for_assembly_part
+		@open_file_for_assembly_part
+		@write_to_assembly_part
+		f:close()
+	end
+end
+
+@get_current_buffer_name_for_assembly_part+=
+local filename = vim.fn.expand("%:p")
+local parendir = vim.fn.fnamemodify( filename, ":p:h" )
+local fn
+@if_star_replace_with_current_filename
+@otherwise_put_node_name
+@add_assembly_part_suffix
+
+@add_assembly_part_suffix+=
+local fname = vim.fn.expand( "%:t:r:r" )
+fn = fn .. "." .. fname .. ".tlpart"
+
+@open_file_for_assembly_part+=
+local f = io.open(fn, "w")
+
+@write_to_assembly_part+=
+for _, line in ipairs(lines) do
+	f:write(line .. "\n")
+end
+
+@foreach_assembly_glob_and_asssemble_and_tangle+=
+for name, _ in pairs(assemblies) do
+	if name ~= "*" and #lines > 0 then
+		@get_current_buffer_name_for_assembly_part
+		@glob_all_parts
+		@assemble_lines_into_single_table
+		@clear_sections
+		@read_file_line_by_line_from_variable
+		@output_sections_assembly
+	end
+end
+
+@glob_all_parts+=
+local assembled_fn = vim.fn.fnamemodify(fn, ":r:r")
+local parts = vim.fn.glob(assembled_fn .. ".*.tlpart")
+parts = vim.split(parts, "\n")
+
+@assemble_lines_into_single_table+=
+local lines = {}
+for _, part in ipairs(parts) do
+	for line in io.lines(part) do
+		table.insert(lines, line)
+	end
+end
+
+@output_sections_assembly+=
+local parendir = vim.api.nvim_call_function("fnamemodify", { assembled_fn, ":p:h" })
+for name, section in pairs(sections) do
+	if section.root then
+		local fn
+		@if_star_replace_assembled_filename
+		@otherwise_put_node_name_assembled
+		lines = {}
+		@output_generated_header
+		outputSections(lines, file, name, "")
+		@check_file_is_modified
+		@if_modified_write_file
+	end
+end
+
+@if_star_replace_assembled_filename+=
+if name == "*" then
+	fn = assembled_fn
+
+@otherwise_put_node_name_assembled+=
+else
+	fn = parendir .. "/" .. name
+end
+
+@if_there_is_an_unamed_assemble_just_tangle+=
+if #assemblies["*"] > 0 then
+	local lines = assemblies["*"]
+	@clear_sections
+	@read_file_line_by_line_from_variable
+	local filename
+	@output_sections
+end
