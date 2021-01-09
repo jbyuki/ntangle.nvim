@@ -17,19 +17,9 @@ lua ntangle = require("ntangle")
 
 @functions+=
 function! GoToTangle(args)
-	@parse_argument
-	call v:lua.ntangle.goto(expand("%:p"), linesearch, node)
-endfunction
-
-@parse_argument+=
-let node = "*"
-if a:args =~ ":"
-	let m = split(a:args, ":")
-	let node = m[0]
-	let linesearch = str2nr(m[1])
-else
 	let linesearch = str2nr(a:args)
-endif
+	call v:lua.ntangle.goto(linesearch)
+endfunction
 
 @register_commands+=
 command! -nargs=1 TangleGoto call GoToTangle("<args>")

@@ -3,16 +3,8 @@ let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
 function! GoToTangle(args)
-	let node = "*"
-	if a:args =~ ":"
-		let m = split(a:args, ":")
-		let node = m[0]
-		let linesearch = str2nr(m[1])
-	else
-		let linesearch = str2nr(a:args)
-	endif
-	
-	call v:lua.ntangle.goto(expand("%:p"), linesearch, node)
+	let linesearch = str2nr(a:args)
+	call v:lua.ntangle.goto(linesearch)
 endfunction
 
 function! SaveTangleAll()
