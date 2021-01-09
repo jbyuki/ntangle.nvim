@@ -1056,7 +1056,7 @@ local function tangle(filename)
 		
 		for line in io.lines(filename) do
 			if string.match(line, "^@@%S*+=%s*$") then
-				local name = string.match(line, "^@@(%S*)+=%s*$")
+				local name = string.match(line, "^##(%S*)%s*$")
 				
 				curassembly = name
 				assemblies[curassembly] = assemblies[curassembly] or {}
@@ -1074,8 +1074,8 @@ local function tangle(filename)
 		
 		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 		for _, line in ipairs(lines) do
-			if string.match(line, "^@@%S*+=%s*$") then
-				local name = string.match(line, "^@@(%S*)+=%s*$")
+			if string.match(line, "^##%S*%s*$") then
+				local name = string.match(line, "^##(%S*)%s*$")
 				
 				curassembly = name
 				assemblies[curassembly] = assemblies[curassembly] or {}
@@ -1096,23 +1096,16 @@ local function tangle(filename)
 			
 			local parendir = vim.fn.fnamemodify( filename, ":p:h" )
 			local fn
-			if name == "*" then
-				local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-				fn = parendir .. "/tangle/" .. tail
+			local fname = vim.fn.fnamemodify( filename, ":t:r" )
+			local ns = vim.fn.fnamemodify( name, ":t" )
+			local reldir = vim.fn.fnamemodify( name, ":h" )
+			fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
 			
-			else
-				if string.find(name, "/") then
-					fn = parendir .. "/" .. name
-				
-				else 
-					fn = parendir .. "/tangle/" .. name
-				end
-				
+			
+			local isdir = vim.fn.isdirectory( vim.fn.fnamemodify(fn, ":h") )
+			if isdir == 0 then
+				vim.fn.mkdir(parentdir, "p" )
 			end
-			
-			local fname = vim.fn.fnamemodify( filename, ":t:r:r" )
-			fn = fn .. "." .. fname .. ".tlpart"
-			
 			
 			local f = io.open(fn, "w")
 			
@@ -1132,26 +1125,18 @@ local function tangle(filename)
 			
 			local parendir = vim.fn.fnamemodify( filename, ":p:h" )
 			local fn
-			if name == "*" then
-				local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-				fn = parendir .. "/tangle/" .. tail
-			
-			else
-				if string.find(name, "/") then
-					fn = parendir .. "/" .. name
-				
-				else 
-					fn = parendir .. "/tangle/" .. name
-				end
-				
-			end
-			
-			local fname = vim.fn.fnamemodify( filename, ":t:r:r" )
-			fn = fn .. "." .. fname .. ".tlpart"
+			local fname = vim.fn.fnamemodify( filename, ":t:r" )
+			local ns = vim.fn.fnamemodify( name, ":t" )
+			local reldir = vim.fn.fnamemodify( name, ":h" )
+			fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
 			
 			
-			local assembled_fn = vim.fn.fnamemodify(fn, ":r:r")
-			local parts = vim.fn.glob(assembled_fn .. ".*.tlpart")
+			local assembly = {
+				name = vim.split(vim.fn.fnamemodify(fn, ":t"), "%.")[1],
+				ext = vim.fn.fnamemodify(filename, ":e:e:r"),
+				dir = vim.fn.fnamemodify(fn, ":h"),
+			}
+			local parts = vim.fn.glob(assembly.dir .. "/" .. assembly.name .. ".*.tlpart")
 			parts = vim.split(parts, "\n")
 			
 			local lines = {}
@@ -1258,23 +1243,24 @@ local function tangle(filename)
 				lnum = lnum+1;
 			end
 			
-			local parendir = vim.fn.fnamemodify( assembled_fn, ":p:h" )
 			for name, section in pairs(sections) do
 				if section.root then
 					local fn
 					if name == "*" then
-						fn = assembled_fn
+						fn = assembly.dir .. "/" .. assembly.name .. "." .. assembly.ext
 					
 					else
-						fn = parendir .. "/" .. name
+						fn = assembly.dir .. "/" .. name
 					end
 					
 					lines = {}
 					local parts_tails = {}
 					for _, part in ipairs(parts) do
-						local fn = vim.fn.fnamemodify(part, ":t")
-						local particules = vim.split(fn, "%.")
-						table.insert(parts_tails, particules[#particules-1] .. "." .. particules[#particules-2] .. ".tl")
+						print(part)
+						local fn = vim.fn.fnamemodify(part, ":t:r")
+						fn = vim.split(fn, "%.")
+						table.remove(fn, 1)
+						table.insert(parts_tails, table.concat(fn, ".") .. ".tl")
 					end
 					
 					if string.match(fn, "lua$") then
@@ -1329,194 +1315,7 @@ local function tangle(filename)
 		end
 	end
 	
-	if #assemblies["*"] > 0 then
-		local lines = assemblies["*"]
-		sections = {}
-		curSection = nil
-		
-		lineRefs = {}
-		
-		lnum = 1
-		for _,line in ipairs(lines) do
-			if string.match(line, "^%s*@@") then
-				local hasSection = false
-				if sections[name] then
-					hasSection = true
-				end
-				
-				if hasSection then
-					local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
-					local text = pre .. "@" .. post
-					local l = { 
-						linetype = LineType.TEXT, 
-						str = text 
-					}
-					
-					l.lnum = lnum
-					
-					linkedlist.push_back(curSection.lines, l)
-					
-				end
-			
-			elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
-				
-				local section = { linetype = LineType.SECTION, str = name, lines = {}}
-				
-				if op == '+=' or op == '-=' then
-					if sections[name] then
-						if op == '+=' then
-							linkedlist.push_back(sections[name].list, section)
-							
-						elseif op == '-=' then
-							linkedlist.push_front(sections[name].list, section)
-							
-						end
-					else
-						sections[name] = { root = false, list = {} }
-						
-						linkedlist.push_back(sections[name].list, section)
-						
-					end
-				
-				else 
-					sections[name] = { root = true, list = {} }
-					
-					linkedlist.push_back(sections[name].list, section)
-					
-				end
-				
-				curSection = section
-				
-			
-			elseif string.match(line, "^%s*@[^@]%S*%s*$") then
-				local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
-				if name == nil then
-					print(line)
-				end
-				
-				-- @check_that_sections_is_not_empty
-				local l = { 
-					linetype = LineType.REFERENCE, 
-					str = name,
-					prefix = prefix
-				}
-				
-				l.lnum = lnum
-				
-				linkedlist.push_back(curSection.lines, l)
-				
-			
-			else
-				if sections[name] then
-					hasSection = true
-				end
-				
-				local l = { 
-					linetype = LineType.TEXT, 
-					str = line 
-				}
-				
-				l.lnum = lnum
-				
-				linkedlist.push_back(curSection.lines, l)
-				
-			end
-			
-			lineRefs[lnum] = curSection.str
-			
-			lnum = lnum+1;
-		end
-		
-		local filename
-		if not filename then
-			filename = vim.api.nvim_call_function("expand", { "%:p"})
-		end
-		local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
-		for name, section in pairs(sections) do
-			if section.root then
-				local fn
-				if name == "*" then
-					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-					fn = parendir .. "/tangle/" .. tail
-				
-				else
-					if string.find(name, "/") then
-						fn = parendir .. "/" .. name
-					
-					else 
-						fn = parendir .. "/tangle/" .. name
-					end
-					
-				end
-				
-				lines = {}
-				if string.match(fn, "lua$") then
-					local relname
-					if filename then
-						relname = filename
-					else
-						relname = vim.api.nvim_buf_get_name(0)
-					end
-					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
-					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
-				elseif string.match(fn, "vim$") then
-					local relname
-					if filename then
-						relname = filename
-					else
-						relname = vim.api.nvim_buf_get_name(0)
-					end
-					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
-					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
-				end
-				
-				outputSections(lines, file, name, "")
-				local modified = false
-				do
-					local f = io.open(fn, "r")
-					if f then 
-						modified = false
-						local lnum = 1
-						for line in f:lines() do
-							if lnum > #lines then
-								modified = true
-								break
-							end
-							if line ~= lines[lnum] then
-								modified = true
-								break
-							end
-							lnum = lnum + 1
-						end
-						
-						if lnum-1 ~= #lines then
-							modified = true
-						end
-						
-						f:close()
-					else
-						modified = true
-					end
-				end
-				
-				if modified then
-					local f = io.open(fn, "w")
-					if f then
-						for _,line in ipairs(lines) do
-							f:write(line .. "\n")
-						end
-						f:close()
-					else
-						print("Could not write to " .. fn)
-					end
-				end
-				
-			end
-		end
-		
-	end
-	
+	-- @if_there_is_an_unamed_assemble_just_tangle
 end
 
 return {

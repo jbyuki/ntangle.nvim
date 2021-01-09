@@ -9,17 +9,8 @@
 let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
-@functions+=
-function! SaveTangle()
-	let path_dir = expand("%:p:h") . "/" . g:tangle_dir
-	if !isdirectory(path_dir)
-		call mkdir(path_dir)
-	endif
-	call v:lua.ntangle.tangle()
-endfunction
-
 @register_filetype_detection+=
-autocmd BufWrite *.tl call SaveTangle()
+autocmd BufWrite *.tl call v:lua.ntangle.tangle()
 
 @load_lua_module+=
 lua ntangle = require("ntangle")

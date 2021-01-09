@@ -2,14 +2,6 @@
 let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
-function! SaveTangle()
-	let path_dir = expand("%:p:h") . "/" . g:tangle_dir
-	if !isdirectory(path_dir)
-		call mkdir(path_dir)
-	endif
-	call v:lua.ntangle.tangle()
-endfunction
-
 function! GoToTangle(args)
 	let node = "*"
 	if a:args =~ ":"
@@ -39,7 +31,7 @@ function! TangleShowTodo()
 	call v:lua.ntangle.show_todo(bufnr("%"))
 endfunction
 
-autocmd BufWrite *.tl call SaveTangle()
+autocmd BufWrite *.tl call v:lua.ntangle.tangle()
 
 lua ntangle = require("ntangle")
 
