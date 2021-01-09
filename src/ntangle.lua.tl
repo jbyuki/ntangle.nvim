@@ -1,3 +1,4 @@
+##ntangle_main
 @../lua/ntangle.lua=
 @requires
 @parse_variables
@@ -611,123 +612,6 @@ if name == "*" then
 end
 
 @functions+=
-local function show_errors(filename)
-	@clear_sections
-	@read_file_line_by_line
-	@from_every_root_node_mark_visited_sections
-	local qflist = {}
-	@output_undefined_section_references
-	@search_ophan_sections
-	@output_orphan_sections
-	@set_qflist_window
-end
-
-@export_symbols+=
-show_errors = show_errors,
-
-@from_every_root_node_mark_visited_sections+=
-local visited, notdefined = {}, {}
-for name, section in pairs(sections) do
-	if section.root then
-		visitSections(visited, notdefined, name, 0)
-	end
-end
-
-@declare_functions+=
-local visitSections
-
-@functions+=
-function visitSections(visited, notdefined, name, lnum) 
-	@if_already_visited_skip
-	@if_not_defined_add_and_skip
-	visited[name] = true
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			@if_reference_recursively_visit
-		end
-	end
-end
-
-@if_already_visited_skip+=
-if visited[name] then
-	return
-end
-
-@if_not_defined_add_and_skip+=
-if not sections[name] then
-	notdefined[name] = lnum
-	return
-end
-
-@if_reference_recursively_visit+=
-if line.linetype == LineType.REFERENCE then
-	visitSections(visited, notdefined, line.str, line.lnum)
-end
-
-@output_undefined_section_references+=
-for name, lnum in pairs(notdefined) do
-	table.insert(qflist, {
-		filename = filename,
-		lnum = lnum,
-		text = name .. " is empty",
-		type = "W",
-	})
-end
-
-@declare_functions+=
-local searchOrphans
-
-@functions+=
-function searchOrphans(name, visited, orphans, lnum) 
-	@if_not_section_skip
-	@if_not_visited_set_as_orphan_visited_child_and_quit
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			@if_reference_go_further_for_orphans
-		end
-	end
-end
-
-@if_not_visited_set_as_orphan_visited_child_and_quit+=
-if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
-	orphans[name] = lnum
-	local dummy = {}
-	visitSections(visited, dummy, name, 0)
-	return
-end
-
-@if_not_section_skip+=
-if not sections[name] then
-	return
-end
-
-@if_reference_go_further_for_orphans+=
-if line.linetype == LineType.REFERENCE then
-	searchOrphans(line.str, visited, orphans, line.lnum)
-end
-
-@search_ophan_sections+=
-local orphans = {}
-for name, section in pairs(sections) do
-	if not section.root then
-		searchOrphans(name, visited, orphans, 0)
-	end
-end
-
-@output_orphan_sections+=
-for name, lnum in pairs(orphans) do
-	table.insert(qflist, {
-		filename = filename,
-		lnum = lnum,
-		text = name .. " is an orphan section",
-		type = "W",
-	})
-end
-
-@set_qflist_window+=
-vim.fn.setqflist(qflist, "r")
-
-@functions+=
 local function show_storage(buf)
 	@create_storage_float_window
 	@create_storage_float_window_border_window
@@ -1024,6 +908,16 @@ vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. 
 vim.api.nvim_win_close(transpose_win, true)
 
 @functions+=
+local function start()
+	return vim.api.nvim_call_function("reltime", {})
+end
+
+local function stop(start)
+	local dt =  vim.api.nvim_call_function("reltime", { start })
+	return tonumber(vim.api.nvim_call_function("reltimestr", {dt}))
+end
+
+@functions+=
 local function tangle(filename)
 	local assemblies = {}
 	if filename then
@@ -1034,7 +928,7 @@ local function tangle(filename)
 
 	@foreach_assembly_write_out_assembly
 	@foreach_assembly_glob_and_asssemble_and_tangle
-	-- @if_there_is_an_unamed_assemble_just_tangle
+	@if_there_is_an_unamed_assemble_just_tangle
 end
 
 @export_symbols+=
@@ -1083,6 +977,7 @@ for name, lines in pairs(assemblies) do
 	if name ~= "*" and #lines > 0 then
 		@get_current_buffer_name_for_assembly_part
 		@create_assembly_tangle_directory_if_not_existent
+		@create_directory_if_non_existent
 		@open_file_for_assembly_part
 		@write_to_assembly_part
 		f:close()
@@ -1105,9 +1000,10 @@ local reldir = vim.fn.fnamemodify( name, ":h" )
 fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
 
 @create_assembly_tangle_directory_if_not_existent+=
-local isdir = vim.fn.isdirectory( vim.fn.fnamemodify(fn, ":h") )
+local parendir =  vim.fn.fnamemodify(fn, ":h") 
+local isdir = vim.fn.isdirectory(parendir)
 if isdir == 0 then
-	vim.fn.mkdir(parentdir, "p" )
+	vim.fn.mkdir(parendir, "p" )
 end
 
 @open_file_for_assembly_part+=
@@ -1134,9 +1030,10 @@ end
 local assembly = {
 	name = vim.split(vim.fn.fnamemodify(fn, ":t"), "%.")[1],
 	ext = vim.fn.fnamemodify(filename, ":e:e:r"),
-	dir = vim.fn.fnamemodify(fn, ":h"),
+	tangle_dir = vim.fn.fnamemodify(fn, ":h"),
+	dir = vim.fn.fnamemodify(fn, ":h:h"),
 }
-local parts = vim.fn.glob(assembly.dir .. "/" .. assembly.name .. ".*.tlpart")
+local parts = vim.fn.glob(assembly.tangle_dir .. "/" .. assembly.name .. ".*.tlpart")
 parts = vim.split(parts, "\n")
 
 @assemble_lines_into_single_table+=
@@ -1163,7 +1060,7 @@ end
 
 @if_star_replace_assembled_filename+=
 if name == "*" then
-	fn = assembly.dir .. "/" .. assembly.name .. "." .. assembly.ext
+	fn = assembly.tangle_dir .. "/" .. assembly.name .. "." .. assembly.ext
 
 @otherwise_put_node_name_assembled+=
 else
@@ -1182,7 +1079,6 @@ end
 @output_generated_header_assembly+=
 local parts_tails = {}
 for _, part in ipairs(parts) do
-	print(part)
 	local fn = vim.fn.fnamemodify(part, ":t:r")
 	fn = vim.split(fn, "%.")
 	table.remove(fn, 1)

@@ -1,4 +1,4 @@
--- Generated from ntangle.lua.tl using ntangle.nvim
+-- Generated from ntangle.lua.tl, show_helper.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -34,6 +34,8 @@ local collectLines
 local visitSections
 
 local searchOrphans
+
+local close_preview_autocmd
 
 function outputSections(lines, file, name, prefix)
 	if not sections[name] then
@@ -582,182 +584,6 @@ local function getRootFilename()
 	return fn
 end
 
-local function show_errors(filename)
-	sections = {}
-	curSection = nil
-	
-	lineRefs = {}
-	
-	lnum = 1
-	for line in io.lines(filename) do
-		if string.match(line, "^%s*@@") then
-			local hasSection = false
-			if sections[name] then
-				hasSection = true
-			end
-			
-			if hasSection then
-				local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
-				local text = pre .. "@" .. post
-				local l = { 
-					linetype = LineType.TEXT, 
-					str = text 
-				}
-				
-				l.lnum = lnum
-				
-				linkedlist.push_back(curSection.lines, l)
-				
-			end
-		
-		elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
-			
-			local section = { linetype = LineType.SECTION, str = name, lines = {}}
-			
-			if op == '+=' or op == '-=' then
-				if sections[name] then
-					if op == '+=' then
-						linkedlist.push_back(sections[name].list, section)
-						
-					elseif op == '-=' then
-						linkedlist.push_front(sections[name].list, section)
-						
-					end
-				else
-					sections[name] = { root = false, list = {} }
-					
-					linkedlist.push_back(sections[name].list, section)
-					
-				end
-			
-			else 
-				sections[name] = { root = true, list = {} }
-				
-				linkedlist.push_back(sections[name].list, section)
-				
-			end
-			
-			curSection = section
-			
-		
-		elseif string.match(line, "^%s*@[^@]%S*%s*$") then
-			local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
-			if name == nil then
-				print(line)
-			end
-			
-			-- @check_that_sections_is_not_empty
-			local l = { 
-				linetype = LineType.REFERENCE, 
-				str = name,
-				prefix = prefix
-			}
-			
-			l.lnum = lnum
-			
-			linkedlist.push_back(curSection.lines, l)
-			
-		
-		else
-			if sections[name] then
-				hasSection = true
-			end
-			
-			local l = { 
-				linetype = LineType.TEXT, 
-				str = line 
-			}
-			
-			l.lnum = lnum
-			
-			linkedlist.push_back(curSection.lines, l)
-			
-		end
-		
-		lnum = lnum+1;
-	end
-	
-	local visited, notdefined = {}, {}
-	for name, section in pairs(sections) do
-		if section.root then
-			visitSections(visited, notdefined, name, 0)
-		end
-	end
-	
-	local qflist = {}
-	for name, lnum in pairs(notdefined) do
-		table.insert(qflist, {
-			filename = filename,
-			lnum = lnum,
-			text = name .. " is empty",
-			type = "W",
-		})
-	end
-	
-	local orphans = {}
-	for name, section in pairs(sections) do
-		if not section.root then
-			searchOrphans(name, visited, orphans, 0)
-		end
-	end
-	
-	for name, lnum in pairs(orphans) do
-		table.insert(qflist, {
-			filename = filename,
-			lnum = lnum,
-			text = name .. " is an orphan section",
-			type = "W",
-		})
-	end
-	
-	vim.fn.setqflist(qflist, "r")
-	
-end
-
-function visitSections(visited, notdefined, name, lnum) 
-	if visited[name] then
-		return
-	end
-	
-	if not sections[name] then
-		notdefined[name] = lnum
-		return
-	end
-	
-	visited[name] = true
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			if line.linetype == LineType.REFERENCE then
-				visitSections(visited, notdefined, line.str, line.lnum)
-			end
-			
-		end
-	end
-end
-
-function searchOrphans(name, visited, orphans, lnum) 
-	if not sections[name] then
-		return
-	end
-	
-	if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
-		orphans[name] = lnum
-		local dummy = {}
-		visitSections(visited, dummy, name, 0)
-		return
-	end
-	
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			if line.linetype == LineType.REFERENCE then
-				searchOrphans(line.str, visited, orphans, line.lnum)
-			end
-			
-		end
-	end
-end
-
 local function show_storage(buf)
 	local storagebuf = vim.api.nvim_create_buf(false, true)
 	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
@@ -1048,6 +874,15 @@ local function close_storage()
 	
 end
 
+local function start()
+	return vim.api.nvim_call_function("reltime", {})
+end
+
+local function stop(start)
+	local dt =  vim.api.nvim_call_function("reltime", { start })
+	return tonumber(vim.api.nvim_call_function("reltimestr", {dt}))
+end
+
 local function tangle(filename)
 	local assemblies = {}
 	if filename then
@@ -1102,9 +937,10 @@ local function tangle(filename)
 			fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
 			
 			
-			local isdir = vim.fn.isdirectory( vim.fn.fnamemodify(fn, ":h") )
+			local parendir =  vim.fn.fnamemodify(fn, ":h") 
+			local isdir = vim.fn.isdirectory(parendir)
 			if isdir == 0 then
-				vim.fn.mkdir(parentdir, "p" )
+				vim.fn.mkdir(parendir, "p" )
 			end
 			
 			local f = io.open(fn, "w")
@@ -1134,9 +970,10 @@ local function tangle(filename)
 			local assembly = {
 				name = vim.split(vim.fn.fnamemodify(fn, ":t"), "%.")[1],
 				ext = vim.fn.fnamemodify(filename, ":e:e:r"),
-				dir = vim.fn.fnamemodify(fn, ":h"),
+				tangle_dir = vim.fn.fnamemodify(fn, ":h"),
+				dir = vim.fn.fnamemodify(fn, ":h:h"),
 			}
-			local parts = vim.fn.glob(assembly.dir .. "/" .. assembly.name .. ".*.tlpart")
+			local parts = vim.fn.glob(assembly.tangle_dir .. "/" .. assembly.name .. ".*.tlpart")
 			parts = vim.split(parts, "\n")
 			
 			local lines = {}
@@ -1247,7 +1084,7 @@ local function tangle(filename)
 				if section.root then
 					local fn
 					if name == "*" then
-						fn = assembly.dir .. "/" .. assembly.name .. "." .. assembly.ext
+						fn = assembly.tangle_dir .. "/" .. assembly.name .. "." .. assembly.ext
 					
 					else
 						fn = assembly.dir .. "/" .. name
@@ -1256,7 +1093,6 @@ local function tangle(filename)
 					lines = {}
 					local parts_tails = {}
 					for _, part in ipairs(parts) do
-						print(part)
 						local fn = vim.fn.fnamemodify(part, ":t:r")
 						fn = vim.split(fn, "%.")
 						table.remove(fn, 1)
@@ -1315,7 +1151,506 @@ local function tangle(filename)
 		end
 	end
 	
-	-- @if_there_is_an_unamed_assemble_just_tangle
+	if #assemblies["*"] > 0 then
+		local lines = assemblies["*"]
+		sections = {}
+		curSection = nil
+		
+		lineRefs = {}
+		
+		lnum = 1
+		for _,line in ipairs(lines) do
+			if string.match(line, "^%s*@@") then
+				local hasSection = false
+				if sections[name] then
+					hasSection = true
+				end
+				
+				if hasSection then
+					local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+					local text = pre .. "@" .. post
+					local l = { 
+						linetype = LineType.TEXT, 
+						str = text 
+					}
+					
+					l.lnum = lnum
+					
+					linkedlist.push_back(curSection.lines, l)
+					
+				end
+			
+			elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				local section = { linetype = LineType.SECTION, str = name, lines = {}}
+				
+				if op == '+=' or op == '-=' then
+					if sections[name] then
+						if op == '+=' then
+							linkedlist.push_back(sections[name].list, section)
+							
+						elseif op == '-=' then
+							linkedlist.push_front(sections[name].list, section)
+							
+						end
+					else
+						sections[name] = { root = false, list = {} }
+						
+						linkedlist.push_back(sections[name].list, section)
+						
+					end
+				
+				else 
+					sections[name] = { root = true, list = {} }
+					
+					linkedlist.push_back(sections[name].list, section)
+					
+				end
+				
+				curSection = section
+				
+			
+			elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+				local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+				if name == nil then
+					print(line)
+				end
+				
+				-- @check_that_sections_is_not_empty
+				local l = { 
+					linetype = LineType.REFERENCE, 
+					str = name,
+					prefix = prefix
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			
+			else
+				if sections[name] then
+					hasSection = true
+				end
+				
+				local l = { 
+					linetype = LineType.TEXT, 
+					str = line 
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			end
+			
+			lineRefs[lnum] = curSection.str
+			
+			lnum = lnum+1;
+		end
+		
+		local filename
+		if not filename then
+			filename = vim.api.nvim_call_function("expand", { "%:p"})
+		end
+		local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					
+					else 
+						fn = parendir .. "/tangle/" .. name
+					end
+					
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print("Could not write to " .. fn)
+					end
+				end
+				
+			end
+		end
+		
+	end
+	
+end
+
+local function show_helper()
+	sections = {}
+	curSection = nil
+	
+	lineRefs = {}
+	
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	lnum = 1
+	for _,line in ipairs(lines) do
+		if string.match(line, "^%s*@@") then
+			local hasSection = false
+			if sections[name] then
+				hasSection = true
+			end
+			
+			if hasSection then
+				local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+				local text = pre .. "@" .. post
+				local l = { 
+					linetype = LineType.TEXT, 
+					str = text 
+				}
+				
+				l.lnum = lnum
+				
+				linkedlist.push_back(curSection.lines, l)
+				
+			end
+		
+		elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+			
+			local section = { linetype = LineType.SECTION, str = name, lines = {}}
+			
+			if op == '+=' or op == '-=' then
+				if sections[name] then
+					if op == '+=' then
+						linkedlist.push_back(sections[name].list, section)
+						
+					elseif op == '-=' then
+						linkedlist.push_front(sections[name].list, section)
+						
+					end
+				else
+					sections[name] = { root = false, list = {} }
+					
+					linkedlist.push_back(sections[name].list, section)
+					
+				end
+			
+			else 
+				sections[name] = { root = true, list = {} }
+				
+				linkedlist.push_back(sections[name].list, section)
+				
+			end
+			
+			curSection = section
+			
+		
+		elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+			local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+			if name == nil then
+				print(line)
+			end
+			
+			-- @check_that_sections_is_not_empty
+			local l = { 
+				linetype = LineType.REFERENCE, 
+				str = name,
+				prefix = prefix
+			}
+			
+			l.lnum = lnum
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		
+		else
+			if sections[name] then
+				hasSection = true
+			end
+			
+			local l = { 
+				linetype = LineType.TEXT, 
+				str = line 
+			}
+			
+			l.lnum = lnum
+			
+			linkedlist.push_back(curSection.lines, l)
+			
+		end
+		
+		lineRefs[lnum] = curSection.str
+		
+		lnum = lnum+1;
+	end
+	
+	local visited, notdefined = {}, {}
+	for name, section in pairs(sections) do
+		if section.root then
+			visitSections(visited, notdefined, name, 0)
+		end
+	end
+	
+	local qflist = {}
+	for name, lnum in pairs(notdefined) do
+		table.insert(qflist, name .. " is empty" )
+	end
+	
+	local orphans = {}
+	for name, section in pairs(sections) do
+		if not section.root then
+			searchOrphans(name, visited, orphans, 0)
+		end
+	end
+	
+	for name, lnum in pairs(orphans) do
+		table.insert(qflist, name .. " is an orphan section")
+	end
+	
+
+	local max_width = 0
+	for _, line in ipairs(qflist) do
+		max_width = math.max(max_width, vim.api.nvim_strwidth(line))
+	end
+	
+	local buf = vim.api.nvim_create_buf(false, true)
+	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
+	
+	local MAX_WIDTH = 60
+	local MAX_HEIGHT = 15
+	
+	local popup = {
+		width = math.min(max_width, MAX_WIDTH),
+		height = math.min(#qflist, MAX_HEIGHT),
+		margin_up = 3,
+		margin_right = 6,
+	}
+	
+	local opts = {
+		relative = "win",
+		win = vim.api.nvim_get_current_win(),
+		width = popup.width,
+		height = popup.height,
+		col = w - popup.width - popup.margin_right,
+		row =  popup.margin_up,
+		style = 'minimal'
+	}
+	
+	local win = vim.api.nvim_open_win(buf, false, opts)
+	
+	vim.api.nvim_win_set_option(win, "winblend", 30)
+	
+	local borderbuf = vim.api.nvim_create_buf(false, true)
+	
+	local border_opts = {
+		relative = "win",
+		win = vim.api.nvim_get_current_win(),
+		width = popup.width+2,
+		height = popup.height+2,
+		col = w - popup.width - popup.margin_right - 1,
+		row =  popup.margin_up - 1,
+		style = 'minimal'
+	}
+	
+	local border_title = " ntangle helper "
+	local center_title = true
+	local border_text = {}
+	
+	local border_chars = {
+		topleft  = '╭',
+		topright = '╮',
+		top      = '─',
+		left     = '│',
+		right    = '│',
+		botleft  = '╰',
+		botright = '╯',
+		bot      = '─',
+	}
+	
+	-- local border_chars = {
+		-- topleft  = '╔',
+		-- topright = '╗',
+		-- top      = '═',
+		-- left     = '║',
+		-- right    = '║',
+		-- botleft  = '╚',
+		-- botright = '╝',
+		-- bot      = '═',
+	-- }
+	
+	for y=1,border_opts.height do
+		local line = ""
+		if y == 1 then
+			if not center_title then
+				line = border_chars.topleft .. border_chars.top
+				local title_len = 0
+				if border_title then
+					line = line .. border_title
+					title_len = vim.api.nvim_strwidth(border_title)
+				end
+				
+				for x=2+title_len+1,border_opts.width-1 do
+					line = line .. border_chars.top
+				end
+				line = line .. border_chars.topright
+				
+			else
+				line = border_chars.topleft
+				
+				local title_len = 0
+				if border_title then
+					title_len = vim.api.nvim_strwidth(border_title)
+				end
+				
+				local pad_left = math.floor((border_opts.width-title_len)/2)
+				
+				for x=2,pad_left do
+					line = line .. border_chars.top
+				end
+				
+				if border_title then
+					line = line .. border_title
+				end
+				
+				for x=pad_left+title_len+1,border_opts.width-1 do
+					line = line .. border_chars.top
+				end
+				
+				line = line .. border_chars.topright
+				
+			end
+		elseif y == border_opts.height then
+			line = border_chars.botleft
+			for x=2,border_opts.width-1 do
+				line = line .. border_chars.bot
+			end
+			line = line .. border_chars.botright
+			
+		else
+			line = border_chars.left
+			for x=2,border_opts.width-1 do
+				line = line .. " "
+			end
+			line = line .. border_chars.right
+			
+		end
+		table.insert(border_text, line)
+	end
+	
+	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+	
+	
+	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+	
+	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
+	
+	vim.api.nvim_buf_set_lines(buf, 0, -1, true, qflist)
+	
+	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
+	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
+end
+
+function visitSections(visited, notdefined, name, lnum) 
+	if visited[name] then
+		return
+	end
+	
+	if not sections[name] then
+		notdefined[name] = lnum
+		return
+	end
+	
+	visited[name] = true
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.REFERENCE then
+				visitSections(visited, notdefined, line.str, line.lnum)
+			end
+			
+		end
+	end
+end
+
+function searchOrphans(name, visited, orphans, lnum) 
+	if not sections[name] then
+		return
+	end
+	
+	if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
+		orphans[name] = lnum
+		local dummy = {}
+		visitSections(visited, dummy, name, 0)
+		return
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.REFERENCE then
+				searchOrphans(line.str, visited, orphans, line.lnum)
+			end
+			
+		end
+	end
+end
+
+function close_preview_autocmd(events, winnr)
+  vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_win_close, "..winnr..", true)")
 end
 
 return {
@@ -1327,13 +1662,13 @@ collectSection = collectSection,
 
 getRootFilename = getRootFilename,
 
-show_errors = show_errors,
-
 show_storage = show_storage,
 
 close_storage = close_storage,
 
 tangle = tangle,
+
+show_helper = show_helper,
 
 }
 
