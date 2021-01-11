@@ -1,4 +1,4 @@
--- Generated from border_window.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from border_window.lua.tl, find_root.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local transpose_win
@@ -21,6 +21,10 @@ local lineRefs = {}
 
 local nagivationLines = {}
 
+local get_section
+
+local resolve_root_section
+
 local outputSectionsFull
 
 local outputSections
@@ -35,65 +39,260 @@ local close_preview_autocmd
 
 local collectLines
 
+function get_section(lines, row)
+	local containing
+	local lnum = row
+	while lnum >= 1 do
+		local line = lines[lnum]
+		if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+			
+			containing = name
+		end
+		
+		lnum = lnum - 1
+	end
+
+	while lnum <= #lines do
+		local line = lines[lnum]
+		if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+			
+			containing = name
+		end
+		
+		lnum = lnum + 1
+	end
+
+	assert(containing, "no containing section!")
+	return containing
+end
+
+function resolve_root_section(containing)
+	local open = { containing }
+	local explored = {}
+	local roots = {}
+	while #open > 0 do
+		local name = open[#open]
+		table.remove(open)
+		explored[name] = true
+
+		if sections[name].root then
+			roots[name] = true
+		end
+		
+
+		if refs[name] then
+			local parents = refs[name]
+			local i = 1
+			while i <= #parents do
+				if explored[parent] then
+					table.remove(parents, i)
+				else
+					i = i + 1
+				end
+			end
+			
+			for _, parent in ipairs(parents) do
+				table.insert(open, parent)
+			end
+		end
+	end
+
+	assert(vim.tbl_count(roots) == 1, "multiple roots or none")
+	local name = vim.tbl_keys(roots)[1]
+	return name
+end
+
 local function goto(lnum)
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+	local _, row, _, _ = unpack(vim.fn.getpos("."))
+	local assembly_name
+	while row >= 1 do
+		local line = lines[row]
+		if string.match(line, "^##%S*%s*$") then
+			local name = string.match(line, "^##(%S*)%s*$")
+			
+			assembly_name = name
+			break
+		end
+		
+		row = row - 1
+	end
+	
 	if assembly_name then
+		local assemblies = {}
+		local curassembly = "*"
+		assemblies[curassembly] = {}
+		
+		for lnum, line in ipairs(lines) do
+			if string.match(line, "^##%S*%s*$") then
+				local name = string.match(line, "^##(%S*)%s*$")
+				
+				curassembly = name
+				
+				assemblies[curassembly] = assemblies[curassembly] or {}
+				
+			else
+				table.insert(assemblies[curassembly], line)
+				
+			end
+		end
+		
+		local name = assembly_name
+		filename = nil
+		if not filename then
+			filename = vim.fn.expand("%:p")
+		end
+		
+		local parendir = vim.fn.fnamemodify( filename, ":p:h" )
+		local fn
+		local fname = vim.fn.fnamemodify( filename, ":t:r" )
+		local ns = vim.fn.fnamemodify( name, ":t" )
+		local reldir = vim.fn.fnamemodify( name, ":h" )
+		fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
+		
+		
+		local assembly = {
+			name = vim.split(vim.fn.fnamemodify(fn, ":t"), "%.")[1],
+			ext = vim.fn.fnamemodify(filename, ":e:e:r"),
+			tangle_dir = vim.fn.fnamemodify(fn, ":h"),
+			dir = vim.fn.fnamemodify(fn, ":h:h"),
+		}
+		local parts = vim.fn.glob(assembly.tangle_dir .. "/" .. assembly.name .. ".*.tlpart")
+		parts = vim.split(parts, "\n")
+		
+		local bufferlines = lines
+		local offset = {}
+		
+		local lines = {}
+		local origin = {}
+		for _, part in ipairs(parts) do
+			local first = true
+			local part_origin
+			for line in io.lines(part) do
+				if first then
+					if line == filename then
+						break
+					end
+					local f = io.open(line, "r")
+					if not f then
+						break
+					end
+					f:close()
+					
+					offset[line] = #lines
+					
+					
+					part_origin = line
+					
+					first = false
+				else
+					table.insert(lines, line)
+					table.insert(origin, part_origin)
+				end
+			end
+			
+		end
+		
+		offset[filename] = #lines
+		for _, line in ipairs(assemblies[name]) do
+			table.insert(lines, line)
+			table.insert(origin, filename)
+		end
+		
+		sections = {}
+		curSection = nil
+		
+		lineRefs = {}
+		
+		parse(lines)
+		
+
+		local rootlines = bufferlines
+		local _, row, _, _ = unpack(vim.fn.getpos("."))
+		local containing = get_section(rootlines, row)
+		local name = resolve_root_section(containing)
+		
+		local tangled = {}
+		outputSectionsFull(tangled, name)
+		
+		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
+		
+		local l = tangled[lnum]
+		local lorigin = origin[l.lnum]
+		assert(lorigin, "nil origin")
+		
+		local l = tangled[lnum]
+		local relpos = l.lnum - offset[lorigin]
+		
+		if lorigin == filename then
+			local jumpline
+			local curassembly
+			local curassemblyindex = 0
+			for lnum, line in ipairs(rootlines) do
+				if string.match(line, "^##%S*%s*$") then
+					local name = string.match(line, "^##(%S*)%s*$")
+					
+					curassembly = name
+					
+				else
+					if curassembly == assembly_name then
+						curassemblyindex = curassemblyindex + 1
+					end
+					
+					if curassemblyindex == relpos then
+						jumpline = lnum
+						break
+					end
+					
+				end
+			end
+			
+			vim.fn.setpos(".", {0, jumpline, 0, 0})
+			
+		else
+			local jumpline
+			local curassembly
+			local curassemblyindex = 0
+			local lnum = 1
+			for line in io.lines(lorigin) do
+				if string.match(line, "^##%S*%s*$") then
+					local name = string.match(line, "^##(%S*)%s*$")
+					
+					curassembly = name
+					
+				else
+					if curassembly == assembly_name then
+						curassemblyindex = curassemblyindex + 1
+					end
+					
+					if curassemblyindex == relpos then
+						jumpline = lnum
+						break
+					end
+					
+				end
+				lnum = lnum + 1
+			end
+			
+			vim.api.nvim_command("e " .. lorigin)
+			vim.fn.setpos(".", {0, jumpline, 0, 0})
+		end
+		
 	else
 		sections = {}
 		curSection = nil
 		
 		lineRefs = {}
 		
-		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 		parse(lines)
 		
+		local rootlines = lines
 		local _, row, _, _ = unpack(vim.fn.getpos("."))
-		local containing
-		while row >= 1 do
-			local line = lines[row]
-			if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
-				
-				containing = name
-			end
-			row = row - 1
-		end
-		
-		assert(containing, "no containing section!")
-		
-		local open = { containing }
-		local explored = {}
-		local roots = {}
-		while #open > 0 do
-			local name = open[#open]
-			table.remove(open)
-			explored[name] = true
-		
-			if sections[name].root then
-				roots[name] = true
-			end
-			
-		
-			if refs[name] then
-				local parents = refs[name]
-				local i = 1
-				while i <= #parents do
-					if explored[parent] then
-						table.remove(parents, i)
-					else
-						i = i + 1
-					end
-				end
-				
-				for _, parent in ipairs(parents) do
-					table.insert(open, parent)
-				end
-				
-			end
-		end
-		
-		assert(vim.tbl_count(roots) == 1, "multiple roots or none")
-		
-		local name = vim.tbl_keys(roots)[1]
+		local containing = get_section(rootlines, row)
+		local name = resolve_root_section(containing)
 		
 		local tangled = {}
 		outputSectionsFull(tangled, name)
@@ -183,14 +382,20 @@ end
 local function tangle(filename)
 	local assemblies = {}
 	if filename then
+		local lines = {}
+		for line in io.open(lines) do
+			table.insert(lines, line)
+		end
+		
 		local curassembly = "*"
 		assemblies[curassembly] = {}
 		
-		for line in io.lines(filename) do
-			if string.match(line, "^@@%S*+=%s*$") then
+		for lnum, line in ipairs(lines) do
+			if string.match(line, "^##%S*%s*$") then
 				local name = string.match(line, "^##(%S*)%s*$")
 				
 				curassembly = name
+				
 				assemblies[curassembly] = assemblies[curassembly] or {}
 				
 			else
@@ -199,17 +404,18 @@ local function tangle(filename)
 			end
 		end
 		
-		
 	else
+		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		
 		local curassembly = "*"
 		assemblies[curassembly] = {}
 		
-		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-		for _, line in ipairs(lines) do
+		for lnum, line in ipairs(lines) do
 			if string.match(line, "^##%S*%s*$") then
 				local name = string.match(line, "^##(%S*)%s*$")
 				
 				curassembly = name
+				
 				assemblies[curassembly] = assemblies[curassembly] or {}
 				
 			else

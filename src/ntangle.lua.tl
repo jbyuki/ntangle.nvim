@@ -278,9 +278,11 @@ vim.api.nvim_win_close(transpose_win, true)
 local function tangle(filename)
 	local assemblies = {}
 	if filename then
-		@read_file_line_by_line_and_separate_assemblies
+		@read_lines_from_filename
+		@read_line_by_line_and_separate_assemblies
 	else
-		@read_buffer_line_by_line_and_separate_assemblies
+		@read_lines_from_buffer
+		@read_line_by_line_and_separate_assemblies
 	end
 
 	@foreach_assembly_write_out_assembly
@@ -291,31 +293,27 @@ end
 @export_symbols+=
 tangle = tangle,
 
-@read_file_line_by_line_and_separate_assemblies+=
-local curassembly = "*"
-assemblies[curassembly] = {}
-
-for line in io.lines(filename) do
-	if string.match(line, "^@@%S*+=%s*$") then
-		@extract_assembly_name
-		@set_as_current_assembly
-	else
-		@add_line_to_current_assembly
-	end
+@read_lines_from_filename+=
+local lines = {}
+for line in io.open(lines) do
+	table.insert(lines, line)
 end
 
+@read_lines_from_buffer+=
+local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 
-@read_buffer_line_by_line_and_separate_assemblies+=
+@read_line_by_line_and_separate_assemblies+=
 local curassembly = "*"
 assemblies[curassembly] = {}
 
-local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-for _, line in ipairs(lines) do
+for lnum, line in ipairs(lines) do
 	if string.match(line, "^##%S*%s*$") then
 		@extract_assembly_name
 		@set_as_current_assembly
+		@init_assembly_table_if_empty
 	else
 		@add_line_to_current_assembly
+		@add_line_origin_of_assembly
 	end
 end
 
@@ -324,6 +322,8 @@ local name = string.match(line, "^##(%S*)%s*$")
 
 @set_as_current_assembly+=
 curassembly = name
+
+@init_assembly_table_if_empty+=
 assemblies[curassembly] = assemblies[curassembly] or {}
 
 @add_line_to_current_assembly+=

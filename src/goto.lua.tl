@@ -1,15 +1,30 @@
 ##ntangle_main
 @functions+=
 local function goto(lnum)
-	@get_current_cursor_position
+	@read_lines_from_buffer
 	@search_top_for_assembly_name
 	if assembly_name then
+		local assemblies = {}
+		@read_line_by_line_and_separate_assemblies
+		local name = assembly_name
+		filename = nil
+		@get_current_buffer_name_for_assembly_part
+		@glob_all_parts
+		local bufferlines = lines
+		@assemble_lines_into_single_table_except_current_from_memory
+		@add_lines_in_buffer_into_assembly
+		@clear_sections
+		@read_file_line_by_line_from_variable
+
+		local rootlines = bufferlines
+		@resolve_root_section_at_cursor
+		@output_for_root_section
+		@go_to_line_assembly
 	else
 		@clear_sections
-		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 		@read_file_line_by_line_from_variable
-		@trace_back_to_section_name
-		@resolve_root_section
+		local rootlines = lines
+		@resolve_root_section_at_cursor
 		@output_for_root_section
 		@go_to_line
 	end
@@ -58,61 +73,138 @@ assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled
 local l = tangled[lnum]
 vim.fn.setpos(".", {0, l.lnum, 0, 0})
 
-@resolve_root_section+=
-local open = { containing }
-local explored = {}
-local roots = {}
-while #open > 0 do
-	local name = open[#open]
-	table.remove(open)
-	explored[name] = true
-
-	@if_root_add_to_roots
-
-	if refs[name] then
-		local parents = refs[name]
-		@remove_any_parent_which_was_already_explored
-		@add_remaining_to_open
-	end
-end
-
-assert(vim.tbl_count(roots) == 1, "multiple roots or none")
-
-local name = vim.tbl_keys(roots)[1]
-
-@remove_any_parent_which_was_already_explored+=
-local i = 1
-while i <= #parents do
-	if explored[parent] then
-		table.remove(parents, i)
-	else
-		i = i + 1
-	end
-end
-
-@add_remaining_to_open+=
-for _, parent in ipairs(parents) do
-	table.insert(open, parent)
-end
-
-@if_root_add_to_roots+=
-if sections[name].root then
-	roots[name] = true
-end
-
-@trace_back_to_section_name+=
+@resolve_root_section_at_cursor+=
 local _, row, _, _ = unpack(vim.fn.getpos("."))
-local containing
+local containing = get_section(rootlines, row)
+local name = resolve_root_section(containing)
+
+@search_top_for_assembly_name+=
+local _, row, _, _ = unpack(vim.fn.getpos("."))
+local assembly_name
 while row >= 1 do
 	local line = lines[row]
-	@if_line_is_section_save_it_and_quit
+	@if_line_is_assembly_name_save_and_quit
 	row = row - 1
 end
 
-assert(containing, "no containing section!")
-
-@if_line_is_section_save_it_and_quit+=
-if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-	@parse_section_name
-	containing = name
+@if_line_is_assembly_name_save_and_quit+=
+if string.match(line, "^##%S*%s*$") then
+	@extract_assembly_name
+	assembly_name = name
+	break
 end
+
+@assemble_lines_into_single_table_except_current_from_memory+=
+local lines = {}
+local origin = {}
+for _, part in ipairs(parts) do
+	@read_single_assembly_part_and_skip_current_in_buffer
+end
+
+@read_single_assembly_part_and_skip_current_in_buffer+=
+local first = true
+local part_origin
+for line in io.lines(part) do
+	if first then
+		if line == filename then
+			break
+		end
+		@if_origin_file_does_not_exist_quit_early
+		@add_offset_to_lines
+		@set_as_current_part_origin
+		first = false
+	else
+		table.insert(lines, line)
+		table.insert(origin, part_origin)
+	end
+end
+
+@if_origin_file_does_not_exist_quit_early+=
+local f = io.open(line, "r")
+if not f then
+	break
+end
+f:close()
+
+@set_as_current_part_origin+=
+part_origin = line
+
+@assemble_lines_into_single_table_except_current_from_memory-=
+local offset = {}
+
+@add_offset_to_lines+=
+offset[line] = #lines
+
+
+@add_lines_in_buffer_into_assembly+=
+offset[filename] = #lines
+for _, line in ipairs(assemblies[name]) do
+	table.insert(lines, line)
+	table.insert(origin, filename)
+end
+
+@go_to_line_assembly+=
+assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
+
+local l = tangled[lnum]
+local lorigin = origin[l.lnum]
+assert(lorigin, "nil origin")
+
+local l = tangled[lnum]
+local relpos = l.lnum - offset[lorigin]
+
+if lorigin == filename then
+	@search_for_line_with_assembled
+	@go_to_line_assembly_in_current_buffer
+else
+	@search_for_line_with_assembled_by_opening_file
+	@go_to_line_assembly_outside_buffer
+end
+
+@search_for_line_with_assembled+=
+local jumpline
+local curassembly
+local curassemblyindex = 0
+for lnum, line in ipairs(rootlines) do
+	if string.match(line, "^##%S*%s*$") then
+		@extract_assembly_name
+		@set_as_current_assembly
+	else
+		@advance_assembly_offset_if_in_correct_assembly
+		@if_offset_has_reached_relative_pos_quit_and_save_lnum
+	end
+end
+
+@advance_assembly_offset_if_in_correct_assembly+=
+if curassembly == assembly_name then
+	curassemblyindex = curassemblyindex + 1
+end
+
+@if_offset_has_reached_relative_pos_quit_and_save_lnum+=
+if curassemblyindex == relpos then
+	jumpline = lnum
+	break
+end
+
+@search_for_line_with_assembled_by_opening_file+=
+local jumpline
+local curassembly
+local curassemblyindex = 0
+local lnum = 1
+for line in io.lines(lorigin) do
+	if string.match(line, "^##%S*%s*$") then
+		@extract_assembly_name
+		@set_as_current_assembly
+	else
+		@advance_assembly_offset_if_in_correct_assembly
+		@if_offset_has_reached_relative_pos_quit_and_save_lnum
+	end
+	lnum = lnum + 1
+end
+
+@go_to_line_assembly_in_current_buffer+=
+vim.fn.setpos(".", {0, jumpline, 0, 0})
+
+@go_to_line_assembly_outside_buffer+=
+vim.api.nvim_command("e " .. lorigin)
+vim.fn.setpos(".", {0, jumpline, 0, 0})
