@@ -53,15 +53,18 @@ function get_section(lines, row)
 		lnum = lnum - 1
 	end
 
-	while lnum <= #lines do
-		local line = lines[lnum]
-		if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
-			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+	if not containing then
+		local lnum = row
+		while lnum <= #lines do
+			local line = lines[lnum]
+			if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				containing = name
+			end
 			
-			containing = name
+			lnum = lnum + 1
 		end
-		
-		lnum = lnum + 1
 	end
 
 	assert(containing, "no containing section!")
@@ -119,6 +122,21 @@ local function goto(lnum)
 		end
 		
 		row = row - 1
+	end
+	
+	if not assembly_name then
+		local lnum = row
+		while lnum <= #lines do
+			local line = lines[lnum]
+			if string.match(line, "^##%S*%s*$") then
+				local name = string.match(line, "^##(%S*)%s*$")
+				
+				assembly_name = name
+				break
+			end
+			
+			lnum = lnum + 1
+		end
 	end
 	
 	if assembly_name then

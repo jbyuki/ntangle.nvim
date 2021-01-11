@@ -12,10 +12,13 @@ function get_section(lines, row)
 		lnum = lnum - 1
 	end
 
-	while lnum <= #lines do
-		local line = lines[lnum]
-		@if_line_is_section_save_it_and_quit
-		lnum = lnum + 1
+	if not containing then
+		local lnum = row
+		while lnum <= #lines do
+			local line = lines[lnum]
+			@if_line_is_section_save_it_and_quit
+			lnum = lnum + 1
+		end
 	end
 
 	assert(containing, "no containing section!")

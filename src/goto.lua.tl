@@ -87,6 +87,15 @@ while row >= 1 do
 	row = row - 1
 end
 
+if not assembly_name then
+	local lnum = row
+	while lnum <= #lines do
+		local line = lines[lnum]
+		@if_line_is_assembly_name_save_and_quit
+		lnum = lnum + 1
+	end
+end
+
 @if_line_is_assembly_name_save_and_quit+=
 if string.match(line, "^##%S*%s*$") then
 	@extract_assembly_name
