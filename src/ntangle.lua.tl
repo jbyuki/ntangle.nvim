@@ -308,16 +308,6 @@ if string.match(lines[1], "^##%S*%s*$") then
 	@set_as_current_assembly
 end
 
-table.remove(lines, 1)
-
-for lnum, line in ipairs(lines) do
-	if string.match(line, "^##%S*%s*$") then
-	else
-		@add_line_to_current_assembly
-		@add_line_origin_of_assembly
-	end
-end
-
 @extract_assembly_name+=
 local name = string.match(line, "^##(%S*)%s*$")
 
@@ -349,6 +339,7 @@ local link_file = io.open(link_name, "w")
 link_file:write(fn)
 link_file:close()
 
+
 @glob_all_links_and_assemble_except_current+=
 path = vim.fn.fnamemodify(path, ":p")
 local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
@@ -373,14 +364,38 @@ if f then
 	
 	buffer = vim.split(buffer, "\n")
 	table.remove(buffer, 1)
+	@put_offset_in_assembled_for_part
 	for lnum, line in ipairs(buffer) do
 		table.insert(assembled, line)
+		@append_origin_to_assembled_array
 	end
 end
 
+@glob_all_links_and_assemble_except_current-=
+local origin = {}
+
+@append_origin_to_assembled_array+=
+table.insert(origin, origin_path)
+
+@append_current_origin_to_assembled_array+=
+table.insert(origin, fn)
+
+@glob_all_links_and_assemble_except_current-=
+local offset = {}
+
+@put_offset_in_assembled_for_part+=
+offset[origin_path] = #assembled
+
+@put_offset_in_assembled_for_current+=
+offset[fn] = #assembled
+
 @append_current_buffer_to_the_assembled+=
+@put_offset_in_assembled_for_current
 for lnum, line in ipairs(lines) do
-	table.insert(assembled, line)
+	if lnum > 1 then
+		table.insert(assembled, line)
+		@append_current_origin_to_assembled_array
+	end
 end
 
 @set_filename_of_assembled+=

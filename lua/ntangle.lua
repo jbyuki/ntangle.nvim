@@ -108,80 +108,80 @@ function resolve_root_section(containing)
 end
 
 local function goto(lnum)
+	local lines = {}
+	local curassembly
 	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
-	local _, row, _, _ = unpack(vim.fn.getpos("."))
-	local assembly_name
-	while row >= 1 do
-		local line = lines[row]
-		if string.match(line, "^##%S*%s*$") then
-			local name = string.match(line, "^##(%S*)%s*$")
-			
-			assembly_name = name
-			break
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
 		end
 		
-		row = row - 1
-	end
-	
-	if not assembly_name then
-		local lnum = row
-		while lnum <= #lines do
-			local line = lines[lnum]
-			if string.match(line, "^##%S*%s*$") then
-				local name = string.match(line, "^##(%S*)%s*$")
-				
-				assembly_name = name
-				break
-			end
-			
-			lnum = lnum + 1
-		end
-	end
-	
-	if assembly_name then
-		local assemblies = {}
-		local name = assembly_name
-		filename = nil
-		local bufferlines = lines
+		
+		local assembled = {}
 		local offset = {}
 		
-		local lines = {}
 		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
-			local first = true
-			local part_origin
-			for line in io.lines(part) do
-				if first then
-					if line == filename then
-						break
-					end
-					local f = io.open(line, "r")
-					if not f then
-						break
-					end
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					local buffer = f:read("*all")
 					f:close()
 					
-					offset[line] = #lines
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
 					
-					
-					part_origin = line
-					
-					first = false
-				else
-					table.insert(lines, line)
-					table.insert(origin, part_origin)
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
 				end
+				
 			end
-			
 		end
 		
-		offset[filename] = #lines
-		for _, line in ipairs(assemblies[name]) do
-			table.insert(lines, line)
-			table.insert(origin, filename)
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
 		end
 		
+
+		local rootlines = lines
+		local lines = assembled
 		sections = {}
 		curSection = nil
 		
@@ -190,7 +190,6 @@ local function goto(lnum)
 		parse(lines)
 		
 
-		local rootlines = bufferlines
 		local _, row, _, _ = unpack(vim.fn.getpos("."))
 		local containing = get_section(rootlines, row)
 		local name = resolve_root_section(containing)
@@ -204,61 +203,14 @@ local function goto(lnum)
 		local lorigin = origin[l.lnum]
 		assert(lorigin, "nil origin")
 		
-		local l = tangled[lnum]
 		local relpos = l.lnum - offset[lorigin]
 		
-		if lorigin == filename then
-			local jumpline
-			local curassembly
-			local curassemblyindex = 0
-			for lnum, line in ipairs(rootlines) do
-				if string.match(line, "^##%S*%s*$") then
-					local name = string.match(line, "^##(%S*)%s*$")
-					
-					curassembly = name
-					
-				else
-					if curassembly == assembly_name then
-						curassemblyindex = curassemblyindex + 1
-					end
-					
-					if curassemblyindex == relpos then
-						jumpline = lnum
-						break
-					end
-					
-				end
-			end
-			
-			vim.fn.setpos(".", {0, jumpline, 0, 0})
+		if lorigin == fn then
+			vim.fn.setpos(".", {0, relpos+1, 0, 0})
 			
 		else
-			local jumpline
-			local curassembly
-			local curassemblyindex = 0
-			local lnum = 1
-			for line in io.lines(lorigin) do
-				if string.match(line, "^##%S*%s*$") then
-					local name = string.match(line, "^##(%S*)%s*$")
-					
-					curassembly = name
-					
-				else
-					if curassembly == assembly_name then
-						curassemblyindex = curassemblyindex + 1
-					end
-					
-					if curassemblyindex == relpos then
-						jumpline = lnum
-						break
-					end
-					
-				end
-				lnum = lnum + 1
-			end
-			
 			vim.api.nvim_command("e " .. lorigin)
-			vim.fn.setpos(".", {0, jumpline, 0, 0})
+			vim.fn.setpos(".", {0, relpos+1, 0, 0})
 		end
 		
 	else
@@ -269,6 +221,7 @@ local function goto(lnum)
 		
 		parse(lines)
 		
+
 		local rootlines = lines
 		local _, row, _, _ = unpack(vim.fn.getpos("."))
 		local containing = get_section(rootlines, row)
@@ -328,14 +281,6 @@ local function tangle(filename)
 		
 	end
 	
-	table.remove(lines, 1)
-	
-	for lnum, line in ipairs(lines) do
-		if string.match(line, "^##%S*%s*$") then
-		else
-		end
-	end
-	
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
@@ -355,7 +300,12 @@ local function tangle(filename)
 		link_file:close()
 		
 		
+		
 		local assembled = {}
+		local offset = {}
+		
+		local origin = {}
+		
 		path = vim.fn.fnamemodify(path, ":p")
 		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
@@ -372,16 +322,26 @@ local function tangle(filename)
 					
 					buffer = vim.split(buffer, "\n")
 					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
 					for lnum, line in ipairs(buffer) do
 						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
 					end
 				end
 				
 			end
 		end
 		
+		offset[fn] = #assembled
+		
 		for lnum, line in ipairs(lines) do
-			table.insert(assembled, line)
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
 		end
 		
 		local lines = assembled 
