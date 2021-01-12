@@ -656,12 +656,96 @@ function parse(lines)
 end
 
 local function show_helper()
+	local curassembly
+	local lines = {}
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+
+	local filename
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		
+		local assembled = {}
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					local buffer = f:read("*all")
+					f:close()
+					
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
+				end
+				
+			end
+		end
+		
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
+		end
+		
+
+		lines = assembled
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+	end
+
 	sections = {}
 	curSection = nil
 	
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	parse(lines)
 	
+
 	local visited, notdefined = {}, {}
 	for name, section in pairs(sections) do
 		if section.root then

@@ -1,9 +1,28 @@
 ##ntangle_main
 @functions+=
 local function show_helper()
+	local curassembly
+	local lines = {}
+	@read_lines_from_buffer
+
+	@read_assembly_name_if_any
+
+	local filename
+	if curassembly then
+		@construct_path_for_link_file
+		
+		local assembled = {}
+		@glob_all_links_and_assemble_except_current
+		@append_current_buffer_to_the_assembled
+
+		lines = assembled
+		@clear_sections
+		@read_file_line_by_line_from_variable
+	end
+
 	@clear_sections
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	@read_file_line_by_line_from_variable
+
 	@from_every_root_node_mark_visited_sections
 	local qflist = {}
 	@output_undefined_section_references
