@@ -8,6 +8,35 @@ return {
 @export_symbols
 }
 
+@functions+=
+local function tangle(filename)
+	local curassembly
+	local lines = {}
+	if filename then
+		@read_lines_from_filename
+	else
+		@read_lines_from_buffer
+	end
+
+	@read_assembly_name_if_any
+	if curassembly then
+		@if_any_assembly_write_link_file
+		local assembled = {}
+		@glob_all_links_and_assemble_except_current
+		@append_current_buffer_to_the_assembled
+		local lines = assembled 
+		@set_filename_of_assembled
+		@read_file_line_by_line_from_variable
+		@output_sections_assembly
+	else
+		@read_file_line_by_line_from_variable
+		@output_sections
+	end
+end
+
+@export_symbols+=
+tangle = tangle,
+
 @read_file_line_by_line+=
 local lines = {}
 for line in io.lines(filename) do
@@ -19,10 +48,8 @@ parse(lines)
 parse(lines)
 
 @output_sections+=
-if not filename then
-	filename = vim.api.nvim_call_function("expand", { "%:p"})
-end
-local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
+filename = filename or vim.api.nvim_buf_get_name(0)
+local parendir = vim.fn.fnamemodify(filename, ":p:h" )
 for name, section in pairs(sections) do
 	if section.root then
 		local fn
@@ -43,17 +70,7 @@ if name == "*" then
 
 @otherwise_put_node_name+=
 else
-	@if_has_slash_put_in_indicated_directory
-	@otherwise_put_in_tangle_directory
-end
-
-@if_has_slash_put_in_indicated_directory+=
-if string.find(name, "/") then
 	fn = parendir .. "/" .. name
-
-@otherwise_put_in_tangle_directory+=
-else 
-	fn = parendir .. "/tangle/" .. name
 end
 
 @declare_functions+=
@@ -132,14 +149,14 @@ end
 
 @if_modified_write_file+=
 if modified then
-	local f = io.open(fn, "w")
+	local f, err = io.open(fn, "w")
 	if f then
 		for _,line in ipairs(lines) do
 			f:write(line .. "\n")
 		end
 		f:close()
 	else
-		print("Could not write to " .. fn)
+		print(err)
 	end
 end
 
@@ -274,43 +291,27 @@ vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. 
 @switch_to_back_to_buffer+=
 vim.api.nvim_win_close(transpose_win, true)
 
-@functions+=
-local function tangle(filename)
-	local assemblies = {}
-	if filename then
-		@read_lines_from_filename
-		@read_line_by_line_and_separate_assemblies
-	else
-		@read_lines_from_buffer
-		@read_line_by_line_and_separate_assemblies
-	end
-
-	@foreach_assembly_write_out_assembly
-	@foreach_assembly_glob_and_asssemble_and_tangle
-	@if_there_is_an_unamed_assemble_just_tangle
-end
-
-@export_symbols+=
-tangle = tangle,
 
 @read_lines_from_filename+=
-local lines = {}
 for line in io.open(lines) do
 	table.insert(lines, line)
 end
 
 @read_lines_from_buffer+=
-local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 
-@read_line_by_line_and_separate_assemblies+=
-local curassembly = "*"
-assemblies[curassembly] = {}
+@read_assembly_name_if_any+=
+local line = lines[1] or ""
+if string.match(lines[1], "^##%S*%s*$") then
+	@extract_assembly_name
+	@extract_assembly_name
+	@set_as_current_assembly
+end
+
+table.remove(lines, 1)
 
 for lnum, line in ipairs(lines) do
 	if string.match(line, "^##%S*%s*$") then
-		@extract_assembly_name
-		@set_as_current_assembly
-		@init_assembly_table_if_empty
 	else
 		@add_line_to_current_assembly
 		@add_line_origin_of_assembly
@@ -323,99 +324,76 @@ local name = string.match(line, "^##(%S*)%s*$")
 @set_as_current_assembly+=
 curassembly = name
 
-@init_assembly_table_if_empty+=
-assemblies[curassembly] = assemblies[curassembly] or {}
+@if_any_assembly_write_link_file+=
+@construct_path_for_link_file
+@write_link_file
 
-@add_line_to_current_assembly+=
-table.insert(assemblies[curassembly], line)
+@construct_path_for_link_file+=
+local fn = filename or vim.api.nvim_buf_get_name(0)
+local parendir = vim.fn.fnamemodify(fn, ":p:h")
+local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+local part_tail = vim.fn.fnamemodify(fn, ":t")
+local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+local path = vim.fn.fnamemodify(link_name, ":h")
+@create_directory_if_non_existent
 
-@foreach_assembly_write_out_assembly+=
-for name, lines in pairs(assemblies) do
-	if name ~= "*" and #lines > 0 then
-		@get_current_buffer_name_for_assembly_part
-		@create_assembly_tangle_directory_if_not_existent
-		@create_directory_if_non_existent
-		@open_file_for_assembly_part
-		@write_out_assembly_part_origin
-		@write_to_assembly_part
-		f:close()
-	end
+@create_directory_if_non_existent+=
+if vim.fn.isdirectory(path) == 0 then
+	-- "p" means create also subdirectories
+	vim.fn.mkdir(path, "p") 
 end
 
-@get_current_buffer_name_for_assembly_part+=
-if not filename then
-	filename = vim.fn.expand("%:p")
-end
+@write_link_file+=
+local link_file = io.open(link_name, "w")
+link_file:write(fn)
+link_file:close()
 
-local parendir = vim.fn.fnamemodify( filename, ":p:h" )
-local fn
-@add_assembly_part_suffix
-
-@add_assembly_part_suffix+=
-local fname = vim.fn.fnamemodify( filename, ":t:r" )
-local ns = vim.fn.fnamemodify( name, ":t" )
-local reldir = vim.fn.fnamemodify( name, ":h" )
-fn = parendir .. "/" .. reldir .. "/tangle/" .. ns .. "." .. fname .. ".tlpart"
-
-@create_assembly_tangle_directory_if_not_existent+=
-local parendir =  vim.fn.fnamemodify(fn, ":h") 
-local isdir = vim.fn.isdirectory(parendir)
-if isdir == 0 then
-	vim.fn.mkdir(parendir, "p" )
-end
-
-@open_file_for_assembly_part+=
-local f = io.open(fn, "w")
-
-@write_to_assembly_part+=
-for _, line in ipairs(lines) do
-	f:write(line .. "\n")
-end
-
-@foreach_assembly_glob_and_asssemble_and_tangle+=
-for name, lines in pairs(assemblies) do
-	if name ~= "*" and #lines > 0 then
-		@get_current_buffer_name_for_assembly_part
-		@glob_all_parts
-		@assemble_lines_into_single_table
-		@clear_sections
-		@read_file_line_by_line_from_variable
-		@output_sections_assembly
-	end
-end
-
-@glob_all_parts+=
-local assembly = {
-	name = vim.split(vim.fn.fnamemodify(fn, ":t"), "%.")[1],
-	ext = vim.fn.fnamemodify(filename, ":e:e:r"),
-	tangle_dir = vim.fn.fnamemodify(fn, ":h"),
-	dir = vim.fn.fnamemodify(fn, ":h:h"),
-}
-local parts = vim.fn.glob(assembly.tangle_dir .. "/" .. assembly.name .. ".*.tlpart")
-parts = vim.split(parts, "\n")
-
-@assemble_lines_into_single_table+=
-local lines = {}
+@glob_all_links_and_assemble_except_current+=
+path = vim.fn.fnamemodify(path, ":p")
+local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+link_name = vim.fn.fnamemodify(link_name, ":p")
 for _, part in ipairs(parts) do
-	@read_single_assembly_part_and_skip_first_which_is_origin
-end
-
-@read_single_assembly_part_and_skip_first_which_is_origin+=
-local first = true
-for line in io.lines(part) do
-	if first then
-		first = false
-	else
-		table.insert(lines, line)
+	if link_name ~= part then
+		@read_link_from_link_file
+		@append_lines_from_part_file
 	end
 end
+
+@read_link_from_link_file+=
+local f = io.open(part, "r")
+local origin_path = f:read("*line")
+f:close()
+
+@append_lines_from_part_file+=
+local f = io.open(origin_path, "r")
+if f then
+	local buffer = f:read("*all")
+	f:close()
+	
+	buffer = vim.split(buffer, "\n")
+	table.remove(buffer, 1)
+	for lnum, line in ipairs(buffer) do
+		table.insert(assembled, line)
+	end
+end
+
+@append_current_buffer_to_the_assembled+=
+for lnum, line in ipairs(lines) do
+	table.insert(assembled, line)
+end
+
+@set_filename_of_assembled+=
+local ext = vim.fn.fnamemodify(fn, ":e:e")
+local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 
 @output_sections_assembly+=
+local parendir = vim.fn.fnamemodify(filename, ":p:h" )
 for name, section in pairs(sections) do
 	if section.root then
 		local fn
-		@if_star_replace_assembled_filename
-		@otherwise_put_node_name_assembled
+		@if_star_replace_with_current_filename
+		@otherwise_put_node_name
 		lines = {}
 		@output_generated_header_assembly
 		outputSections(lines, file, name, "")
@@ -424,41 +402,14 @@ for name, section in pairs(sections) do
 	end
 end
 
-@if_star_replace_assembled_filename+=
-if name == "*" then
-	fn = assembly.tangle_dir .. "/" .. assembly.name .. "." .. assembly.ext
-
-@otherwise_put_node_name_assembled+=
-else
-	fn = assembly.dir .. "/" .. name
-end
-
-@if_there_is_an_unamed_assemble_just_tangle+=
-if #assemblies["*"] > 0 then
-	local lines = assemblies["*"]
-	@clear_sections
-	@read_file_line_by_line_from_variable
-	local filename
-	@output_sections
-end
-
 @output_generated_header_assembly+=
-local parts_tails = {}
+local parts_name = {}
 for _, part in ipairs(parts) do
-	local fn = vim.fn.fnamemodify(part, ":t:r")
-	fn = vim.split(fn, "%.")
-	table.remove(fn, 1)
-	table.insert(parts_tails, table.concat(fn, ".") .. ".tl")
+	table.insert(parts_name, vim.fn.fnamemodify(part, ":t:e:e:e"))
 end
 
 if string.match(fn, "lua$") then
-	table.insert(lines, "-- Generated from " .. table.concat(parts_tails, ", ") .. " using ntangle.nvim")
+	table.insert(lines, "-- Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
 elseif string.match(fn, "vim$") then
-	table.insert(lines, "\" Generated from " .. table.concat(parts_tails, ", ") .. " using ntangle.nvim")
+	table.insert(lines, "\" Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
 end
-
-@write_out_assembly_part_origin+=
-if not filename then
-	filename = vim.api.nvim_buf_get_name()
-end
-f:write(filename .. "\n")
