@@ -1,4 +1,4 @@
--- Generated from border_window.lua.tl, debug.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from border_window.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -21,8 +21,6 @@ local borderwin
 
 local nagivationLines = {}
 
-local debug_array
-
 local get_section
 
 local resolve_root_section
@@ -39,14 +37,6 @@ local searchOrphans
 
 local close_preview_autocmd
 
-function debug_array(l)
-	if #l == 0 then
-		print("{}")
-	end
-	for i, li in ipairs(l) do
-		print(i .. ": " .. vim.inspect(li))
-	end
-end
 function get_section(lines, row)
 	local containing
 	local lnum = row
@@ -109,6 +99,7 @@ function resolve_root_section(containing)
 			for _, parent in ipairs(parents) do
 				table.insert(open, parent)
 			end
+			
 		end
 	end
 
@@ -261,6 +252,7 @@ local function go_definition()
 	vim.fn.setpos(".", {0, def.lnum, 0, 0})
 	
 	-- debug_array(definitions)
+	
 end
 
 local function goto(lnum)
@@ -366,6 +358,7 @@ local function goto(lnum)
 		else
 			vim.api.nvim_command("e " .. lorigin)
 			vim.fn.setpos(".", {0, relpos+1, 0, 0})
+			
 		end
 		
 	else
@@ -531,6 +524,7 @@ local function tangle(filename)
 				elseif string.match(fn, "vim$") then
 					table.insert(lines, "\" Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
 				end
+				
 				outputSections(lines, file, name, "")
 				local modified = false
 				do
@@ -781,6 +775,7 @@ function parse(lines)
 			
 			refs[name] = refs[name] or {}
 			table.insert(refs[name], curSection.str)
+			
 			linkedlist.push_back(curSection.lines, l)
 			
 		
@@ -1043,6 +1038,7 @@ local function show_helper()
 				line = line .. " "
 			end
 			line = line .. border_chars.right
+			
 		end
 		table.insert(border_text, line)
 	end
@@ -1058,6 +1054,7 @@ local function show_helper()
 	
 	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
 	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
+	
 end
 
 function visitSections(visited, notdefined, name, lnum) 
@@ -1221,6 +1218,7 @@ local function collectSection()
 			local nav = { origin = origin, lnum = relpos+1 }
 			table.insert(navigationLines, nav)
 		end
+		
 	else
 		sections = {}
 		curSection = nil
@@ -1253,6 +1251,8 @@ local function collectSection()
 		
 	end
 
+	local ft = vim.api.nvim_buf_get_option(0, "ft")
+	
 	transpose_buf = vim.api.nvim_create_buf(false, true)
 	
 	local perc = 0.8
@@ -1364,6 +1364,7 @@ local function collectSection()
 				line = line .. " "
 			end
 			line = line .. border_chars.right
+			
 		end
 		table.insert(border_text, line)
 	end
@@ -1375,6 +1376,7 @@ local function collectSection()
 	vim.api.nvim_set_current_win(transpose_win)
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
+	vim.api.nvim_buf_set_option(0, "ft", ft)
 
 	local transpose_lines = {}
 	for _, l in ipairs(tangled) do

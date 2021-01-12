@@ -40,10 +40,12 @@ local function collectSection()
 		@save_lines_for_navigation
 	end
 
+	@save_current_filetype
 	@create_buffer_if_not_existent
 	@get_current_window_dimensions
 	@create_window_for_transpose
 	@create_border_around_transpose_window
+	@setup_transpose_buffer
 
 	@put_lines_in_buffer
 	@jump_to_lines_in_transpose_buffer
@@ -188,3 +190,9 @@ for lnum,line in ipairs(tangled) do
 	local nav = { origin = origin, lnum = relpos+1 }
 	table.insert(navigationLines, nav)
 end
+
+@save_current_filetype+=
+local ft = vim.api.nvim_buf_get_option(0, "ft")
+
+@setup_transpose_buffer+=
+vim.api.nvim_buf_set_option(0, "ft", ft)
