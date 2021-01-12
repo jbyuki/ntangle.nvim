@@ -10,7 +10,6 @@ function parse(lines)
 		@check_if_line_is_section
 		@check_if_line_is_reference
 		@otherwise_add_to_section
-		@save_line_reference
 		lnum = lnum+1;
 	end
 end

@@ -26,9 +26,12 @@ local function tangle(filename)
 		@append_current_buffer_to_the_assembled
 		local lines = assembled 
 		@set_filename_of_assembled
+
+		@clear_sections
 		@read_file_line_by_line_from_variable
 		@output_sections_assembly
 	else
+		@clear_sections
 		@read_file_line_by_line_from_variable
 		@output_sections
 	end

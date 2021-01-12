@@ -41,7 +41,8 @@ outputSectionsFull(tangled, name)
 local outputSectionsFull
 
 @functions+=
-function outputSectionsFull(lines, name)
+function outputSectionsFull(lines, name, prefix)
+	prefix = prefix or ""
 	@check_if_section_exists_otherwise_return_with_cur
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
@@ -59,18 +60,18 @@ end
 
 @if_line_is_text_store_line+=
 if line.linetype == LineType.TEXT then
-	table.insert(lines, line)
+	table.insert(lines, { prefix, line })
 end
 
 @if_reference_recursively_call_output_sections_full+=
 if line.linetype == LineType.REFERENCE then
-	outputSectionsFull(lines, line.str)
+	outputSectionsFull(lines, line.str, line.prefix .. prefix)
 end
 
 @go_to_line+=
 assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
 
-local l = tangled[lnum]
+local _, l = unpack(tangled[lnum])
 vim.fn.setpos(".", {0, l.lnum, 0, 0})
 
 @resolve_root_section_at_cursor+=

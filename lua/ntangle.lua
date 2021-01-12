@@ -17,8 +17,6 @@ local LineType = {
 
 local refs = {}
 
-local lineRefs = {}
-
 local nagivationLines = {}
 
 local get_section
@@ -44,10 +42,12 @@ function get_section(lines, row)
 	local lnum = row
 	while lnum >= 1 do
 		local line = lines[lnum]
+		print("search " .. line)
 		if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
 			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
 			
 			containing = name
+			break
 		end
 		
 		lnum = lnum - 1
@@ -61,6 +61,7 @@ function get_section(lines, row)
 				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
 				
 				containing = name
+				break
 			end
 			
 			lnum = lnum + 1
@@ -185,8 +186,6 @@ local function goto(lnum)
 		sections = {}
 		curSection = nil
 		
-		lineRefs = {}
-		
 		parse(lines)
 		
 
@@ -217,8 +216,6 @@ local function goto(lnum)
 		sections = {}
 		curSection = nil
 		
-		lineRefs = {}
-		
 		parse(lines)
 		
 
@@ -232,13 +229,14 @@ local function goto(lnum)
 		
 		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
 		
-		local l = tangled[lnum]
+		local _, l = unpack(tangled[lnum])
 		vim.fn.setpos(".", {0, l.lnum, 0, 0})
 		
 	end
 end
 
-function outputSectionsFull(lines, name)
+function outputSectionsFull(lines, name, prefix)
+	prefix = prefix or ""
 	if not sections[name] then
 		return
 	end
@@ -246,11 +244,11 @@ function outputSectionsFull(lines, name)
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			if line.linetype == LineType.TEXT then
-				table.insert(lines, line)
+				table.insert(lines, { prefix, line })
 			end
 			
 			if line.linetype == LineType.REFERENCE then
-				outputSectionsFull(lines, line.str)
+				outputSectionsFull(lines, line.str, line.prefix .. prefix)
 			end
 			
 		end
@@ -348,6 +346,10 @@ local function tangle(filename)
 		local ext = vim.fn.fnamemodify(fn, ":e:e")
 		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 		
+
+		sections = {}
+		curSection = nil
+		
 		parse(lines)
 		
 		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
@@ -418,6 +420,9 @@ local function tangle(filename)
 		end
 		
 	else
+		sections = {}
+		curSection = nil
+		
 		parse(lines)
 		
 		filename = filename or vim.api.nvim_buf_get_name(0)
@@ -639,8 +644,6 @@ function parse(lines)
 			
 		end
 		
-		lineRefs[lnum] = curSection.str
-		
 		lnum = lnum+1;
 	end
 end
@@ -648,8 +651,6 @@ end
 local function show_helper()
 	sections = {}
 	curSection = nil
-	
-	lineRefs = {}
 	
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	parse(lines)
@@ -867,34 +868,12 @@ function close_preview_autocmd(events, winnr)
 end
 
 local function collectSection()
-	sections = {}
-	curSection = nil
-	
-	lineRefs = {}
-	
-	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-	parse(lines)
-	
-	local curnum = vim.api.nvim_call_function("line", {"."})
-	local name = lineRefs[curnum]
-	
+	local curassembly
 	local lines = {}
-	local fn = name
-	if name == "*" then
-		local filename = vim.api.nvim_buf_get_name(0)
-		fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-	end
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
-	if string.match(fn, "lua$") then
-		table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
-	elseif string.match(fn, "vim$") then
-		table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
-	end
-	
-	local jumpline = collectLines(name, lines, "", curnum)
-	
-	local originbuf = vim.api.nvim_call_function("bufnr", {})
-	local curcol = vim.api.nvim_call_function("col", {"."})
+
+	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
 
 	local transpose_buf = vim.api.nvim_create_buf(false, true)
@@ -903,6 +882,7 @@ local function collectSection()
 		vim.api.nvim_buf_set_option(transpose_buf, "ft", old_ft)
 	end
 	-- vim.api.nvim_buf_set_name(transpose_buf, "transpose")
+	
 	
 	local perc = 0.8
 	local win_width  = vim.api.nvim_win_get_width(0)
@@ -1024,30 +1004,63 @@ local function collectSection()
 	vim.api.nvim_set_current_win(transpose_win)
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
-	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
-	
-	vim.api.nvim_set_current_buf(transpose_buf)
-	
-	vim.api.nvim_command("normal ggdG")
-	
-	local lnumtr = 0
-	for _,line in ipairs(lines) do
-		local lnum, text = unpack(line)
-		vim.api.nvim_buf_set_lines(transpose_buf, lnumtr, lnumtr, false, { text })
-		lnumtr = lnumtr + 1
+
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
 	end
 	
-	vim.api.nvim_command("normal Gddgg")
-	navigationLines = {}
-	for _,line in ipairs(lines) do 
-		local lnum, _ = unpack(line)
-		navigationLines[#navigationLines+1] = { buf = originbuf, lnum = lnum }
-	end
 	
-	if jumpline then
-		vim.api.nvim_call_function("cursor", { jumpline, curcol-1 })
+	local tangled = {}
+	if curassembly then
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local rootlines = lines
+		print("row " .. row)
+		local containing = get_section(rootlines, row)
+		
+		local tangled = {}
+		outputSectionsFull(tangled, containing)
+		
+		local jumpline
+		
+		for lnum, line in ipairs(tangled) do
+			local _, l = unpack(line)
+			if l.lnum == row then
+				jumpline = lnum
+				break
+			end
+		end
+		
+		assert(jumpline, "Could not find line to jump")
+		
+		local transpose_lines = {}
+		for _, l in ipairs(tangled) do
+			local prefix, line = unpack(l)
+			table.insert(transpose_lines, prefix .. line.str)
+		end
+		
+		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
+		
+		vim.fn.setpos(".", {0, jumpline, 0, 0})
 	end
-	
+
+	-- @get_section_name_of_current_line
+	-- @collect_recursively_lines
+	-- @save_current_buffer
+-- 
+	-- @keymap_transpose_buffer
+	-- @save_lines_for_navigation
 end
 
 function collectLines(name, lines, prefix, curnum)
