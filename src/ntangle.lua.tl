@@ -248,48 +248,6 @@ vim.api.nvim_win_set_option(storagewin, "winblend", 30)
 @create_storage_float_window_border_window+=
 vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 
-@get_current_window_dimensions+=
-local perc = 0.8
-local win_width  = vim.api.nvim_win_get_width(0)
-local win_height = vim.api.nvim_win_get_height(0)
-local width = math.floor(perc*win_width)
-local height = math.floor(perc*win_height)
-
-@create_window_for_transpose+=
-local opts = {
-	width = width,
-	height = height,
-	row = math.floor((win_height-height)/2),
-	col = math.floor((win_width-width)/2),
-	relative = "win",
-	win = vim.api.nvim_get_current_win(),
-}
-
-transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-
-@parse_variables+=
-local transpose_win
-
-@create_border_around_transpose_window+=
-local borderbuf = vim.api.nvim_create_buf(false, true)
-
-local border_opts = {
-	relative = "win",
-	win = vim.api.nvim_get_current_win(),
-	width = opts.width+2,
-	height = opts.height+2,
-	col = opts.col-1,
-	row =  opts.row-1,
-	style = 'minimal'
-}
-
-local border_title = "Transpose"
-local center_title = true
-@fill_buffer_with_border_characters
-
-local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-vim.api.nvim_set_current_win(transpose_win)
-vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 
 @switch_to_back_to_buffer+=
 vim.api.nvim_win_close(transpose_win, true)

@@ -1,8 +1,6 @@
 -- Generated from border_window.lua.tl, find_root.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
-local transpose_win
-
 local sections = {}
 local curSection = nil
 
@@ -16,6 +14,10 @@ local LineType = {
 }
 
 local refs = {}
+
+local transpose_win, transpose_buf
+
+local borderwin 
 
 local nagivationLines = {}
 
@@ -34,8 +36,6 @@ local visitSections
 local searchOrphans
 
 local close_preview_autocmd
-
-local collectLines
 
 function get_section(lines, row)
 	local containing
@@ -876,13 +876,7 @@ local function collectSection()
 	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
 
-	local transpose_buf = vim.api.nvim_create_buf(false, true)
-	local old_ft = vim.api.nvim_buf_get_option(0, "ft")
-	if old_ft then
-		vim.api.nvim_buf_set_option(transpose_buf, "ft", old_ft)
-	end
-	-- vim.api.nvim_buf_set_name(transpose_buf, "transpose")
-	
+	transpose_buf = vim.api.nvim_create_buf(false, true)
 	
 	local perc = 0.8
 	local win_width  = vim.api.nvim_win_get_width(0)
@@ -1000,9 +994,8 @@ local function collectSection()
 	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 	
 	
-	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+	borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 	vim.api.nvim_set_current_win(transpose_win)
-	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 
 	local line = lines[1] or ""
@@ -1044,6 +1037,14 @@ local function collectSection()
 		
 		assert(jumpline, "Could not find line to jump")
 		
+		navigationLines = {}
+		local curorigin = vim.api.nvim_buf_get_name(0)
+		for _,line in ipairs(tangled) do 
+			local _, l = unpack(line)
+			local nav = { origin = curorigin, lnum = l.lnum }
+			table.insert(navigationLines, nav)
+		end
+		
 		local transpose_lines = {}
 		for _, l in ipairs(tangled) do
 			local prefix, line = unpack(l)
@@ -1053,51 +1054,24 @@ local function collectSection()
 		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
 		
 		vim.fn.setpos(".", {0, jumpline, 0, 0})
+		
 	end
 
-	-- @get_section_name_of_current_line
-	-- @collect_recursively_lines
-	-- @save_current_buffer
--- 
-	-- @keymap_transpose_buffer
-	-- @save_lines_for_navigation
-end
-
-function collectLines(name, lines, prefix, curnum)
-	local jumpline
-	local s
-	for n, section in pairs(sections) do
-		if n == name then
-			s = section
-			break
-		end
-	end
-	if not s then return end
+	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
 	
-	for section in linkedlist.iter(s.list) do
-		for line in linkedlist.iter(section.lines) do
-			if line.lnum == curnum then jumpline = #lines+1 end
-	
-			if line.linetype == LineType.TEXT then table.insert(lines, { line.lnum, prefix .. line.str })
-			elseif line.linetype == LineType.REFERENCE then 
-				jumpline = collectLines(line.str, lines, prefix .. line.prefix, curnum) or jumpline
-			end
-		end
-	end
-	
-	return jumpline
 end
 
 function navigateTo()
-	local curline = vim.api.nvim_call_function("line", {'.'})
-	local curcol = vim.api.nvim_call_function("col", {'.'})
-	local nav = navigationLines[curline]
+	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
 	vim.api.nvim_win_close(transpose_win, true)
+	vim.api.nvim_win_close(borderwin, true)
 	
-	
-	vim.api.nvim_call_function("cursor", { nav.lnum, curcol })
-	
+	local n = navigationLines[row]
+	if vim.api.nvim_buf_get_name(0) ~= n.origin then
+		vim.fn.nvim_command("e " .. n.origin)
+	end
+	vim.fn.setpos(".", {0, n.lnum, 0, 0})
 end
 
 return {
