@@ -1,4 +1,4 @@
--- Generated from border_window.lua.tl, find_root.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from border_window.lua.tl, debug.lua.tl, find_root.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -21,6 +21,8 @@ local borderwin
 
 local nagivationLines = {}
 
+local debug_array
+
 local get_section
 
 local resolve_root_section
@@ -37,12 +39,16 @@ local searchOrphans
 
 local close_preview_autocmd
 
+function debug_array(l)
+	for i, li in ipairs(l) do
+		print(i .. ": " .. vim.inspect(li))
+	end
+end
 function get_section(lines, row)
 	local containing
 	local lnum = row
 	while lnum >= 1 do
 		local line = lines[lnum]
-		print("search " .. line)
 		if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
 			local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
 			
@@ -123,6 +129,7 @@ local function goto(lnum)
 		
 	end
 	
+	local filename = nil
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
@@ -198,7 +205,7 @@ local function goto(lnum)
 		
 		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
 		
-		local l = tangled[lnum]
+		local _, l = unpack(tangled[lnum])
 		local lorigin = origin[l.lnum]
 		assert(lorigin, "nil origin")
 		
@@ -875,6 +882,143 @@ local function collectSection()
 
 	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+	
+	local tangled = {}
+	local filename
+	local jumpline
+
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		
+		local assembled = {}
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					local buffer = f:read("*all")
+					f:close()
+					
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
+				end
+				
+			end
+		end
+		
+
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
+		end
+		
+
+		local rootlines = lines
+		local lines = assembled
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local containing = get_section(rootlines, row)
+		
+		outputSectionsFull(tangled, containing)
+		
+		for lnum, line in ipairs(tangled) do
+			local _, l = unpack(line)
+			local relpos = l.lnum - offset[fn]
+			if relpos == row-1 then
+				jumpline = lnum
+				break
+			end
+		end
+		
+		assert(jumpline, "Could not jump to line")
+		
+		navigationLines = {}
+		for lnum,line in ipairs(tangled) do 
+			local _, l = unpack(line)
+			local origin = origin[l.lnum]
+			local relpos = l.lnum - offset[origin]
+			local nav = { origin = origin, lnum = relpos+1 }
+			table.insert(navigationLines, nav)
+		end
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local rootlines = lines
+		local containing = get_section(rootlines, row)
+		
+		outputSectionsFull(tangled, containing)
+		
+		for lnum, line in ipairs(tangled) do
+			local _, l = unpack(line)
+			if l.lnum == row then
+				jumpline = lnum
+				break
+			end
+		end
+		
+		assert(jumpline, "Could not find line to jump")
+		
+		navigationLines = {}
+		local curorigin = vim.api.nvim_buf_get_name(0)
+		for _,line in ipairs(tangled) do 
+			local _, l = unpack(line)
+			local nav = { origin = curorigin, lnum = l.lnum }
+			table.insert(navigationLines, nav)
+		end
+		
+	end
 
 	transpose_buf = vim.api.nvim_create_buf(false, true)
 	
@@ -996,66 +1140,19 @@ local function collectSection()
 	
 	borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 	vim.api.nvim_set_current_win(transpose_win)
+	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 
-	local line = lines[1] or ""
-	if string.match(lines[1], "^##%S*%s*$") then
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		curassembly = name
-		
+	local transpose_lines = {}
+	for _, l in ipairs(tangled) do
+		local prefix, line = unpack(l)
+		table.insert(transpose_lines, prefix .. line.str)
 	end
 	
+	vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
 	
-	local tangled = {}
-	if curassembly then
-	else
-		sections = {}
-		curSection = nil
-		
-		parse(lines)
-		
-
-		local rootlines = lines
-		print("row " .. row)
-		local containing = get_section(rootlines, row)
-		
-		local tangled = {}
-		outputSectionsFull(tangled, containing)
-		
-		local jumpline
-		
-		for lnum, line in ipairs(tangled) do
-			local _, l = unpack(line)
-			if l.lnum == row then
-				jumpline = lnum
-				break
-			end
-		end
-		
-		assert(jumpline, "Could not find line to jump")
-		
-		navigationLines = {}
-		local curorigin = vim.api.nvim_buf_get_name(0)
-		for _,line in ipairs(tangled) do 
-			local _, l = unpack(line)
-			local nav = { origin = curorigin, lnum = l.lnum }
-			table.insert(navigationLines, nav)
-		end
-		
-		local transpose_lines = {}
-		for _, l in ipairs(tangled) do
-			local prefix, line = unpack(l)
-			table.insert(transpose_lines, prefix .. line.str)
-		end
-		
-		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
-		
-		vim.fn.setpos(".", {0, jumpline, 0, 0})
-		
-	end
+	vim.fn.setpos(".", {0, jumpline, 0, 0})
+	
 
 	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
 	
@@ -1065,13 +1162,13 @@ function navigateTo()
 	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
 	vim.api.nvim_win_close(transpose_win, true)
-	vim.api.nvim_win_close(borderwin, true)
 	
 	local n = navigationLines[row]
 	if vim.api.nvim_buf_get_name(0) ~= n.origin then
 		vim.fn.nvim_command("e " .. n.origin)
 	end
 	vim.fn.setpos(".", {0, n.lnum, 0, 0})
+	
 end
 
 return {

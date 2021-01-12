@@ -5,6 +5,7 @@ local function goto(lnum)
 	local curassembly
 	@read_lines_from_buffer
 	@read_assembly_name_if_any
+	local filename = nil
 	if curassembly then
 		@construct_path_for_link_file
 		local assembled = {}
@@ -138,7 +139,7 @@ end
 @go_to_line_assembly+=
 assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
 
-local l = tangled[lnum]
+local _, l = unpack(tangled[lnum])
 local lorigin = origin[l.lnum]
 assert(lorigin, "nil origin")
 

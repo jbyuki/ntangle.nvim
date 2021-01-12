@@ -8,7 +8,6 @@ function get_section(lines, row)
 	local lnum = row
 	while lnum >= 1 do
 		local line = lines[lnum]
-		print("search " .. line)
 		@if_line_is_section_save_it_and_quit
 		lnum = lnum - 1
 	end
