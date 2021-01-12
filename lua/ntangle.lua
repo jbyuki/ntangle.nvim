@@ -1,4 +1,4 @@
--- Generated from border_window.lua.tl, debug.lua.tl, find_root.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from border_window.lua.tl, debug.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -40,6 +40,9 @@ local searchOrphans
 local close_preview_autocmd
 
 function debug_array(l)
+	if #l == 0 then
+		print("{}")
+	end
 	for i, li in ipairs(l) do
 		print(i .. ": " .. vim.inspect(li))
 	end
@@ -112,6 +115,152 @@ function resolve_root_section(containing)
 	assert(vim.tbl_count(roots) == 1, "multiple roots or none")
 	local name = vim.tbl_keys(roots)[1]
 	return name
+end
+
+local function go_definition()
+	local tosearch
+	local line = vim.api.nvim_get_current_line()
+	
+	if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+		local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+		
+		tosearch = name
+	
+	elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+		local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+		if name == nil then
+			print(line)
+		end
+		
+		tosearch = name
+	end
+	
+	assert(tosearch, "no reference or section under cursor!")
+
+	local lines = {}
+	local curassembly
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+	local filename = nil
+	local definitions = {}
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local assembled = {}
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					local buffer = f:read("*all")
+					f:close()
+					
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
+				end
+				
+			end
+		end
+		
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
+		end
+		
+
+		for lnum, line in ipairs(assembled) do
+			if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				if name == tosearch then
+					local origin = origin[lnum]
+					local relpos = lnum - offset[origin]
+					local def = {
+						origin = origin,
+						lnum = relpos+1,
+					}
+					
+					table.insert(definitions, def)
+					
+				end
+			end
+			
+		end
+		
+	else
+		for lnum, line in ipairs(lines) do
+			if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				if name == tosearch then
+					local origin = vim.api.nvim_buf_get_name(0)
+					local def = {
+						origin = origin,
+						lnum = lnum,
+					}
+					
+					table.insert(definitions, def)
+					
+				end
+			end
+			
+		end
+		
+	end
+
+	assert(#definitions >= 1, "Definition not found")
+	local def = definitions[1]
+	local curbuf = vim.api.nvim_buf_get_name(0)
+	if def.origin ~= curbuf then
+		vim.api.nvim_command("e " .. def.origin)
+	end
+	
+	vim.fn.setpos(".", {0, def.lnum, 0, 0})
+	
+	-- debug_array(definitions)
 end
 
 local function goto(lnum)
@@ -1256,6 +1405,8 @@ function navigateTo()
 end
 
 return {
+go_definition = go_definition,
+
 goto = goto,
 
 tangle = tangle,
