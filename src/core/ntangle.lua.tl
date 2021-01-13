@@ -253,7 +253,7 @@ link_file:close()
 
 @glob_all_links_and_assemble_except_current+=
 path = vim.fn.fnamemodify(path, ":p")
-local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 link_name = vim.fn.fnamemodify(link_name, ":p")
 for _, part in ipairs(parts) do
 	if link_name ~= part then

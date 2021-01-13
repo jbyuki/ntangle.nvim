@@ -83,7 +83,7 @@ local function show_assemble()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -423,7 +423,7 @@ local function tangle(filename)
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -811,7 +811,7 @@ local function show_helper()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -1061,7 +1061,7 @@ local function collectSection()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then

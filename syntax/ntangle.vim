@@ -24,5 +24,5 @@ syntax match ntangleSection /^@[^[:space:]@]\+[+\-]\?=\s*$/
 syntax match ntangleAssembly /^##[^[:space:]]\+\s*$/
 syntax match ntangleSectionReference /^\s*@[^=@[:space:]]\+\s*$/
 highlight link ntangleSectionReference Special
-highlight link ntangleAssembly IncSearch
+highlight link ntangleAssembly Special
 highlight link ntangleSection Special
