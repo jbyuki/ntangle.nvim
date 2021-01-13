@@ -197,9 +197,9 @@ elseif string.match(fn, "vim$") then
 end
 
 @output_generated_header_fake+=
-if string.match(fn, "lua.tl$") then
+if string.match(filename, "lua.tl$") then
 	table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
-elseif string.match(fn, "vim.tl$") then
+elseif string.match(filename, "vim.tl$") then
 	table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 end
 
@@ -274,17 +274,25 @@ f:close()
 local f = io.open(origin_path, "r")
 if f then
 	@add_to_parts_for_generated
-	local buffer = f:read("*all")
-	f:close()
-	
-	buffer = vim.split(buffer, "\n")
-	table.remove(buffer, 1)
 	@put_offset_in_assembled_for_part
-	for lnum, line in ipairs(buffer) do
-		table.insert(assembled, line)
-		@append_origin_to_assembled_array
+	local lnum = 1
+	while true do
+		local line = f:read("*line")
+		if not line then break end
+		if lnum > 1 then
+			table.insert(assembled, line)
+			@add_count_for_part
+			@append_origin_to_assembled_array
+		end
+		lnum = lnum + 1
 	end
+	f:close()
+else
+	@remove_link_file
 end
+
+@remove_link_file+=
+os.remove(part)
 
 @glob_all_links_and_assemble_except_current-=
 local origin = {}
@@ -310,6 +318,7 @@ for lnum, line in ipairs(lines) do
 	if lnum > 1 then
 		table.insert(assembled, line)
 		@append_current_origin_to_assembled_array
+		@add_count_for_origin
 	end
 end
 

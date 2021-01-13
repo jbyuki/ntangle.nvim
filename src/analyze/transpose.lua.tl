@@ -23,7 +23,9 @@ local function collectSection()
 		@clear_sections
 		@read_file_line_by_line_from_variable
 
-		@get_containg_section_name
+		@get_containing_root_section
+
+		@set_filename_of_assembled
 		@tangle_for_containing_section
 		@search_in_tangled_the_line_where_the_cursor_was_assembly
 		@save_lines_for_navigation_assembly
@@ -32,7 +34,7 @@ local function collectSection()
 		@read_file_line_by_line_from_variable
 
 		local rootlines = lines
-		@get_containg_section_name
+		@get_containing_root_section
 		@tangle_for_containing_section
 		@search_in_tangled_the_line_where_the_cursor_was
 		@save_lines_for_navigation
@@ -109,11 +111,52 @@ vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"n
 @save_cursor_position+=
 local _, row, _, _ = unpack(vim.fn.getpos("."))
 
-@get_containg_section_name+=
+@get_containing_root_section+=
 local containing = get_section(rootlines, row)
+containing = resolve_root_section(containing)
 
 @tangle_for_containing_section+=
-outputSectionsFull(fn, tangled, containing)
+outputSectionsFull(filename, tangled, containing)
+
+@declare_functions+=
+local outputSectionsFull
+
+@functions+=
+function outputSectionsFull(filename, lines, name, prefix)
+	prefix = prefix or ""
+	@check_if_section_exists_otherwise_return_with_cur
+	@if_section_is_root_generate_fake_header
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			@if_line_is_text_store_line
+			@if_reference_recursively_call_output_sections_full
+		end
+	end
+	return cur, nil
+end
+
+@check_if_section_exists_otherwise_return_with_cur+=
+if not sections[name] then
+	return
+end
+
+@if_section_is_root_generate_fake_header+=
+if sections[name].root then
+	local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+	@if_star_replace_with_current_filename
+	@otherwise_put_node_name
+	@output_generated_header_fake
+end
+
+@if_line_is_text_store_line+=
+if line.linetype == LineType.TEXT then
+	table.insert(lines, { prefix, line })
+end
+
+@if_reference_recursively_call_output_sections_full+=
+if line.linetype == LineType.REFERENCE then
+	outputSectionsFull(filename, lines, line.str, line.prefix .. prefix)
+end
 
 @search_in_tangled_the_line_where_the_cursor_was+=
 for lnum, line in ipairs(tangled) do
