@@ -252,6 +252,7 @@ local function show_assemble()
 		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 		
 		vim.api.nvim_buf_set_option(0, "ft", ft)
+		
 
 		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
 		
@@ -1223,6 +1224,7 @@ local function show_helper()
 	end
 	
 
+	table.insert(qflist, "  No warnings :)  ")
 	local max_width = 0
 	for _, line in ipairs(qflist) do
 		max_width = math.max(max_width, vim.api.nvim_strwidth(line))
@@ -1692,6 +1694,7 @@ local function collectSection()
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 	vim.api.nvim_buf_set_option(0, "ft", ft)
+	
 
 	local transpose_lines = {}
 	for _, l in ipairs(tangled) do

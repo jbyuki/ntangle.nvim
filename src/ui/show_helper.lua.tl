@@ -29,6 +29,7 @@ local function show_helper()
 	@search_ophan_sections
 	@output_orphan_sections
 
+	@if_no_text_to_display_add_some_info_text
 	@compute_max_width_for_helper_window
 	@create_float_window_for_helper
 	@create_float_window_border_window
@@ -199,3 +200,6 @@ end
 @attach_autocommand_to_close_helper_on_movement+=
 close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
 close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
+
+@if_no_text_to_display_add_some_info_text+=
+table.insert(qflist, "  No warnings :)  ")

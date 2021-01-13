@@ -39,13 +39,6 @@ end
 @export_symbols+=
 tangle = tangle,
 
-@read_file_line_by_line+=
-local lines = {}
-for line in io.lines(filename) do
-	table.insert(lines, line)
-end
-parse(lines)
-
 @read_file_line_by_line_from_variable+=
 parse(lines)
 
@@ -203,54 +196,12 @@ elseif string.match(fn, "vim$") then
 	table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
 end
 
-@skip_some_lines_if_generated_header+=
-if string.match(fn, "lua$") then
-	startline = startline + 1
-end
-
-if string.match(fn, "vim$") then
-	startline = startline + 1
-end
-
 @output_generated_header_fake+=
 if string.match(fn, "lua.tl$") then
 	table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
 elseif string.match(fn, "vim.tl$") then
 	table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 end
-
-@get_expanded_name_from_current_buffer+=
-local fn = name
-if name == "*" then
-	local filename = vim.api.nvim_buf_get_name(0)
-	fn = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-end
-
-@if_star_replace_and_star_not_present_replace+=
-if root == "*" and not sections["*"] then
-	for name,section in pairs(sections) do
-		if section.root then
-			root = name
-			break
-		end
-	end
-end
-
-@put_storage_text_on_top+=
-local parent_win = vim.api.nvim_get_current_win()
-vim.api.nvim_set_current_win(storagewin)
-vim.api.nvim_set_current_win(parent_win)
-
-@create_storage_float_window+=
-vim.api.nvim_win_set_option(storagewin, "winblend", 30)
-
-@create_storage_float_window_border_window+=
-vim.api.nvim_win_set_option(borderwin, "winblend", 30)
-
-
-@switch_to_back_to_buffer+=
-vim.api.nvim_win_close(transpose_win, true)
-
 
 @read_lines_from_filename+=
 for line in io.open(lines) do

@@ -89,62 +89,6 @@ local _, row, _, _ = unpack(vim.fn.getpos("."))
 local containing = get_section(rootlines, row)
 local name = resolve_root_section(containing)
 
-@if_line_is_assembly_name_save_and_quit+=
-if string.match(line, "^##%S*%s*$") then
-	@extract_assembly_name
-	assembly_name = name
-	break
-end
-
-@assemble_lines_into_single_table_except_current_from_memory+=
-local lines = {}
-local origin = {}
-for _, part in ipairs(parts) do
-	@read_single_assembly_part_and_skip_current_in_buffer
-end
-
-@read_single_assembly_part_and_skip_current_in_buffer+=
-local first = true
-local part_origin
-for line in io.lines(part) do
-	if first then
-		if line == filename then
-			break
-		end
-		@if_origin_file_does_not_exist_quit_early
-		@add_offset_to_lines
-		@set_as_current_part_origin
-		first = false
-	else
-		table.insert(lines, line)
-		table.insert(origin, part_origin)
-	end
-end
-
-@if_origin_file_does_not_exist_quit_early+=
-local f = io.open(line, "r")
-if not f then
-	break
-end
-f:close()
-
-@set_as_current_part_origin+=
-part_origin = line
-
-@assemble_lines_into_single_table_except_current_from_memory-=
-local offset = {}
-
-@add_offset_to_lines+=
-offset[line] = #lines
-
-
-@add_lines_in_buffer_into_assembly+=
-offset[filename] = #lines
-for _, line in ipairs(assemblies[name]) do
-	table.insert(lines, line)
-	table.insert(origin, filename)
-end
-
 @go_to_line_assembly+=
 assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
 
