@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @../lua/ntangle.lua=
 @requires
 @parse_variables
@@ -309,6 +309,8 @@ for _, part in ipairs(parts) do
 	if link_name ~= part then
 		@read_link_from_link_file
 		@append_lines_from_part_file
+	else
+		@add_to_parts_for_generated
 	end
 end
 
@@ -380,9 +382,6 @@ for name, section in pairs(sections) do
 end
 
 @output_generated_header_assembly+=
-local fn = filename or vim.api.nvim_buf_get_name(0)
-table.insert(valid_parts, vim.fn.fnamemodify(fn, ":p:t"))
-
 if string.match(fn, "lua$") then
 	table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 elseif string.match(fn, "vim$") then

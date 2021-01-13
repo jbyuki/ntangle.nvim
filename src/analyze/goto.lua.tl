@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @functions+=
 local function goto(lnum)
 	local lines = {}

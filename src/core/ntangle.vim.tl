@@ -1,4 +1,4 @@
-@../plugin/ntangle.vim=
+@../../plugin/ntangle.vim=
 @set_default_global_variables
 @functions
 @register_filetype_detection

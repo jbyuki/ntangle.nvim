@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @functions+=
 local function collectSection()
 	local curassembly
@@ -115,7 +115,7 @@ local _, row, _, _ = unpack(vim.fn.getpos("."))
 local containing = get_section(rootlines, row)
 
 @tangle_for_containing_section+=
-outputSectionsFull(tangled, containing)
+outputSectionsFull(fn, tangled, containing)
 
 @search_in_tangled_the_line_where_the_cursor_was+=
 for lnum, line in ipairs(tangled) do
@@ -172,7 +172,7 @@ vim.fn.setpos(".", {0, n.lnum, 0, 0})
 @search_in_tangled_the_line_where_the_cursor_was_assembly+=
 for lnum, line in ipairs(tangled) do
 	local _, l = unpack(line)
-	local relpos = l.lnum - offset[fn]
+	local relpos = (l.lnum or -1) - offset[fn]
 	if relpos == row-1 then
 		jumpline = lnum
 		break
@@ -186,7 +186,7 @@ navigationLines = {}
 for lnum,line in ipairs(tangled) do 
 	local _, l = unpack(line)
 	local origin = origin[l.lnum]
-	local relpos = l.lnum - offset[origin]
+	local relpos = (l.lnum or -1) - (offset[origin] or 0)
 	local nav = { origin = origin, lnum = relpos+1 }
 	table.insert(navigationLines, nav)
 end

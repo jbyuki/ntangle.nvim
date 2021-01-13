@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @declare_functions+=
 local parse
 

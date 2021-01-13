@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @fill_buffer_with_border_characters+=
 local border_text = {}
 

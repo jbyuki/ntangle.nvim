@@ -1,4 +1,4 @@
-##ntangle_main
+##../ntangle_main
 @functions+=
 local function show_helper()
 	local curassembly
