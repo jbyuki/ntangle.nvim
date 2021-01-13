@@ -36,15 +36,16 @@ goto = goto,
 
 @output_for_root_section+=
 local tangled = {}
-outputSectionsFull(tangled, name)
+outputSectionsFull(fn, tangled, name)
 
 @declare_functions+=
 local outputSectionsFull
 
 @functions+=
-function outputSectionsFull(lines, name, prefix)
+function outputSectionsFull(fn, lines, name, prefix)
 	prefix = prefix or ""
 	@check_if_section_exists_otherwise_return_with_cur
+	@if_section_is_root_generate_fake_header
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			@if_line_is_text_store_line
@@ -59,6 +60,11 @@ if not sections[name] then
 	return
 end
 
+@if_section_is_root_generate_fake_header+=
+if sections[name].root then
+	@output_generated_header_fake
+end
+
 @if_line_is_text_store_line+=
 if line.linetype == LineType.TEXT then
 	table.insert(lines, { prefix, line })
@@ -66,7 +72,7 @@ end
 
 @if_reference_recursively_call_output_sections_full+=
 if line.linetype == LineType.REFERENCE then
-	outputSectionsFull(lines, line.str, line.prefix .. prefix)
+	outputSectionsFull(fn, lines, line.str, line.prefix .. prefix)
 end
 
 @go_to_line+=

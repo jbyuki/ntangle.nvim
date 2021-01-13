@@ -1,4 +1,4 @@
--- Generated from border_window.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from border_window.lua.tl, debug.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local sections = {}
@@ -21,11 +21,11 @@ local borderwin
 
 local nagivationLines = {}
 
+local debug_array
+
 local get_section
 
 local resolve_root_section
-
-local outputSectionsFull
 
 local outputSections
 
@@ -36,6 +36,17 @@ local visitSections
 local searchOrphans
 
 local close_preview_autocmd
+
+local outputSectionsFull
+
+function debug_array(l)
+	if #l == 0 then
+		print("{}")
+	end
+	for i, li in ipairs(l) do
+		print(i .. ": " .. vim.inspect(li))
+	end
+end
 
 function get_section(lines, row)
 	local containing
@@ -159,6 +170,8 @@ local function go_definition()
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
 		local offset = {}
 		
 		local origin = {}
@@ -174,6 +187,8 @@ local function go_definition()
 				
 				local f = io.open(origin_path, "r")
 				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					local buffer = f:read("*all")
 					f:close()
 					
@@ -255,156 +270,6 @@ local function go_definition()
 	
 end
 
-local function goto(lnum)
-	local lines = {}
-	local curassembly
-	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-	
-	local line = lines[1] or ""
-	if string.match(lines[1], "^##%S*%s*$") then
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		curassembly = name
-		
-	end
-	
-	local filename = nil
-	if curassembly then
-		local fn = filename or vim.api.nvim_buf_get_name(0)
-		local parendir = vim.fn.fnamemodify(fn, ":p:h")
-		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
-		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
-		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
-		local path = vim.fn.fnamemodify(link_name, ":h")
-		if vim.fn.isdirectory(path) == 0 then
-			-- "p" means create also subdirectories
-			vim.fn.mkdir(path, "p") 
-		end
-		
-		
-		local assembled = {}
-		local offset = {}
-		
-		local origin = {}
-		
-		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
-		link_name = vim.fn.fnamemodify(link_name, ":p")
-		for _, part in ipairs(parts) do
-			if link_name ~= part then
-				local f = io.open(part, "r")
-				local origin_path = f:read("*line")
-				f:close()
-				
-				local f = io.open(origin_path, "r")
-				if f then
-					local buffer = f:read("*all")
-					f:close()
-					
-					buffer = vim.split(buffer, "\n")
-					table.remove(buffer, 1)
-					offset[origin_path] = #assembled
-					
-					for lnum, line in ipairs(buffer) do
-						table.insert(assembled, line)
-						table.insert(origin, origin_path)
-						
-					end
-				end
-				
-			end
-		end
-		
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
-				
-			end
-		end
-		
-
-		local rootlines = lines
-		local lines = assembled
-		sections = {}
-		curSection = nil
-		
-		parse(lines)
-		
-
-		local _, row, _, _ = unpack(vim.fn.getpos("."))
-		local containing = get_section(rootlines, row)
-		local name = resolve_root_section(containing)
-		
-		local tangled = {}
-		outputSectionsFull(tangled, name)
-		
-		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
-		
-		local _, l = unpack(tangled[lnum])
-		local lorigin = origin[l.lnum]
-		assert(lorigin, "nil origin")
-		
-		local relpos = l.lnum - offset[lorigin]
-		
-		if lorigin == fn then
-			vim.fn.setpos(".", {0, relpos+1, 0, 0})
-			
-		else
-			vim.api.nvim_command("e " .. lorigin)
-			vim.fn.setpos(".", {0, relpos+1, 0, 0})
-			
-		end
-		
-	else
-		sections = {}
-		curSection = nil
-		
-		parse(lines)
-		
-
-		local rootlines = lines
-		local _, row, _, _ = unpack(vim.fn.getpos("."))
-		local containing = get_section(rootlines, row)
-		local name = resolve_root_section(containing)
-		
-		local tangled = {}
-		outputSectionsFull(tangled, name)
-		
-		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
-		
-		local _, l = unpack(tangled[lnum])
-		vim.fn.setpos(".", {0, l.lnum, 0, 0})
-		
-	end
-end
-
-function outputSectionsFull(lines, name, prefix)
-	prefix = prefix or ""
-	if not sections[name] then
-		return
-	end
-	
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			if line.linetype == LineType.TEXT then
-				table.insert(lines, { prefix, line })
-			end
-			
-			if line.linetype == LineType.REFERENCE then
-				outputSectionsFull(lines, line.str, line.prefix .. prefix)
-			end
-			
-		end
-	end
-	return cur, nil
-end
-
 local function tangle(filename)
 	local curassembly
 	local lines = {}
@@ -449,6 +314,8 @@ local function tangle(filename)
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
 		local offset = {}
 		
 		local origin = {}
@@ -464,6 +331,8 @@ local function tangle(filename)
 				
 				local f = io.open(origin_path, "r")
 				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					local buffer = f:read("*all")
 					f:close()
 					
@@ -514,15 +383,13 @@ local function tangle(filename)
 				end
 				
 				lines = {}
-				local parts_name = {}
-				for _, part in ipairs(parts) do
-					table.insert(parts_name, vim.fn.fnamemodify(part, ":t:e:e:e"))
-				end
+				local fn = filename or vim.api.nvim_buf_get_name(0)
+				table.insert(valid_parts, vim.fn.fnamemodify(fn, ":p:t"))
 				
 				if string.match(fn, "lua$") then
-					table.insert(lines, "-- Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 				elseif string.match(fn, "vim$") then
-					table.insert(lines, "\" Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 				end
 				
 				outputSections(lines, file, name, "")
@@ -833,6 +700,8 @@ local function show_helper()
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
 		local offset = {}
 		
 		local origin = {}
@@ -848,6 +717,8 @@ local function show_helper()
 				
 				local f = io.open(origin_path, "r")
 				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					local buffer = f:read("*all")
 					f:close()
 					
@@ -1143,6 +1014,8 @@ local function collectSection()
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
 		local offset = {}
 		
 		local origin = {}
@@ -1158,6 +1031,8 @@ local function collectSection()
 				
 				local f = io.open(origin_path, "r")
 				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					local buffer = f:read("*all")
 					f:close()
 					
@@ -1377,6 +1252,7 @@ local function collectSection()
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 	vim.api.nvim_buf_set_option(0, "ft", ft)
+	
 
 	local transpose_lines = {}
 	for _, l in ipairs(tangled) do
@@ -1406,10 +1282,170 @@ function navigateTo()
 	
 end
 
+local function goto(lnum)
+	local lines = {}
+	local curassembly
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+	local filename = nil
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					local buffer = f:read("*all")
+					f:close()
+					
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
+				end
+				
+			end
+		end
+		
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+			end
+		end
+		
+
+		local rootlines = lines
+		local lines = assembled
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local _, row, _, _ = unpack(vim.fn.getpos("."))
+		local containing = get_section(rootlines, row)
+		local name = resolve_root_section(containing)
+		
+		local tangled = {}
+		outputSectionsFull(fn, tangled, name)
+		
+		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
+		
+		local _, l = unpack(tangled[lnum])
+		local lorigin = origin[l.lnum]
+		assert(lorigin, "nil origin")
+		
+		local relpos = l.lnum - offset[lorigin]
+		
+		if lorigin == fn then
+			vim.fn.setpos(".", {0, relpos+1, 0, 0})
+			
+		else
+			vim.api.nvim_command("e " .. lorigin)
+			vim.fn.setpos(".", {0, relpos+1, 0, 0})
+		end
+		
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local rootlines = lines
+		local _, row, _, _ = unpack(vim.fn.getpos("."))
+		local containing = get_section(rootlines, row)
+		local name = resolve_root_section(containing)
+		
+		local tangled = {}
+		outputSectionsFull(fn, tangled, name)
+		
+		assert(lnum <= #tangled and lnum >= 1, "line number out of range (>" .. #tangled .. ") !")
+		
+		local _, l = unpack(tangled[lnum])
+		vim.fn.setpos(".", {0, l.lnum, 0, 0})
+		
+	end
+end
+
+function outputSectionsFull(fn, lines, name, prefix)
+	prefix = prefix or ""
+	if not sections[name] then
+		return
+	end
+	
+	if sections[name].root then
+		if string.match(fn, "lua.tl$") then
+			table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
+		elseif string.match(fn, "vim.tl$") then
+			table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
+		end
+		
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.TEXT then
+				table.insert(lines, { prefix, line })
+			end
+			
+			if line.linetype == LineType.REFERENCE then
+				outputSectionsFull(fn, lines, line.str, line.prefix .. prefix)
+			end
+			
+		end
+	end
+	return cur, nil
+end
+
 return {
 go_definition = go_definition,
-
-goto = goto,
 
 tangle = tangle,
 
@@ -1420,6 +1456,8 @@ getRootFilename = getRootFilename,
 show_helper = show_helper,
 
 collectSection = collectSection,
+
+goto = goto,
 
 }
 

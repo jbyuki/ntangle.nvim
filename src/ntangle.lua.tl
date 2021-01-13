@@ -214,10 +214,10 @@ if string.match(fn, "vim$") then
 end
 
 @output_generated_header_fake+=
-if string.match(fn, "lua$") then
-	table.insert(lines, {1, "-- Generated from {relname} using ntangle.nvim"})
-elseif string.match(fn, "vim$") then
-	table.insert(lines, {1, "\" Generated from {relname} using ntangle.nvim"})
+if string.match(fn, "lua.tl$") then
+	table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
+elseif string.match(fn, "vim.tl$") then
+	table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 end
 
 @get_expanded_name_from_current_buffer+=
@@ -320,6 +320,7 @@ f:close()
 @append_lines_from_part_file+=
 local f = io.open(origin_path, "r")
 if f then
+	@add_to_parts_for_generated
 	local buffer = f:read("*all")
 	f:close()
 	
@@ -379,13 +380,17 @@ for name, section in pairs(sections) do
 end
 
 @output_generated_header_assembly+=
-local parts_name = {}
-for _, part in ipairs(parts) do
-	table.insert(parts_name, vim.fn.fnamemodify(part, ":t:e:e:e"))
-end
+local fn = filename or vim.api.nvim_buf_get_name(0)
+table.insert(valid_parts, vim.fn.fnamemodify(fn, ":p:t"))
 
 if string.match(fn, "lua$") then
-	table.insert(lines, "-- Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
+	table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 elseif string.match(fn, "vim$") then
-	table.insert(lines, "\" Generated from " .. table.concat(parts_name, ", ") .. " using ntangle.nvim")
+	table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 end
+
+@glob_all_links_and_assemble_except_current-=
+local valid_parts = {}
+
+@add_to_parts_for_generated+=
+table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
