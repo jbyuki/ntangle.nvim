@@ -23,6 +23,8 @@ local borderwin
 
 local nagivationLines = {}
 
+local fill_border
+
 local debug_array
 
 local get_section
@@ -161,90 +163,7 @@ local function show_assemble()
 		}
 		
 		local center_title = true
-		local border_text = {}
-		
-		local border_chars = {
-			topleft  = '╭',
-			topright = '╮',
-			top      = '─',
-			left     = '│',
-			right    = '│',
-			botleft  = '╰',
-			botright = '╯',
-			bot      = '─',
-		}
-		
-		-- local border_chars = {
-			-- topleft  = '╔',
-			-- topright = '╗',
-			-- top      = '═',
-			-- left     = '║',
-			-- right    = '║',
-			-- botleft  = '╚',
-			-- botright = '╝',
-			-- bot      = '═',
-		-- }
-		
-		for y=1,border_opts.height do
-			local line = ""
-			if y == 1 then
-				if not center_title then
-					line = border_chars.topleft .. border_chars.top
-					local title_len = 0
-					if border_title then
-						line = line .. border_title
-						title_len = vim.api.nvim_strwidth(border_title)
-					end
-					
-					for x=2+title_len+1,border_opts.width-1 do
-						line = line .. border_chars.top
-					end
-					line = line .. border_chars.topright
-					
-				else
-					line = border_chars.topleft
-					
-					local title_len = 0
-					if border_title then
-						title_len = vim.api.nvim_strwidth(border_title)
-					end
-					
-					local pad_left = math.floor((border_opts.width-title_len)/2)
-					
-					for x=2,pad_left do
-						line = line .. border_chars.top
-					end
-					
-					if border_title then
-						line = line .. border_title
-					end
-					
-					for x=pad_left+title_len+1,border_opts.width-1 do
-						line = line .. border_chars.top
-					end
-					
-					line = line .. border_chars.topright
-					
-				end
-			elseif y == border_opts.height then
-				line = border_chars.botleft
-				for x=2,border_opts.width-1 do
-					line = line .. border_chars.bot
-				end
-				line = line .. border_chars.botright
-				
-			else
-				line = border_chars.left
-				for x=2,border_opts.width-1 do
-					line = line .. " "
-				end
-				line = line .. border_chars.right
-				
-			end
-			table.insert(border_text, line)
-		end
-		
-		vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+		fill_border(borderbuf, border_opts, center_title, border_title)
 		
 		
 		borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
@@ -284,6 +203,93 @@ local function assembleNavigate()
 		vim.fn.nvim_command("e " .. nav.origin)
 	end
 	vim.fn.setpos(".", {0, nav.lnum, 0, 0})
+	
+end
+
+function fill_border(borderbuf, border_opts, center_title, border_title)
+	local border_text = {}
+	
+	local border_chars = {
+		topleft  = '╭',
+		topright = '╮',
+		top      = '─',
+		left     = '│',
+		right    = '│',
+		botleft  = '╰',
+		botright = '╯',
+		bot      = '─',
+	}
+	
+	-- local border_chars = {
+		-- topleft  = '╔',
+		-- topright = '╗',
+		-- top      = '═',
+		-- left     = '║',
+		-- right    = '║',
+		-- botleft  = '╚',
+		-- botright = '╝',
+		-- bot      = '═',
+	-- }
+	
+	for y=1,border_opts.height do
+		local line = ""
+		if y == 1 then
+			if not center_title then
+				line = border_chars.topleft .. border_chars.top
+				local title_len = 0
+				if border_title then
+					line = line .. border_title
+					title_len = vim.api.nvim_strwidth(border_title)
+				end
+				
+				for x=2+title_len+1,border_opts.width-1 do
+					line = line .. border_chars.top
+				end
+				line = line .. border_chars.topright
+				
+			else
+				line = border_chars.topleft
+				
+				local title_len = 0
+				if border_title then
+					title_len = vim.api.nvim_strwidth(border_title)
+				end
+				
+				local pad_left = math.floor((border_opts.width-title_len)/2)
+				
+				for x=2,pad_left do
+					line = line .. border_chars.top
+				end
+				
+				if border_title then
+					line = line .. border_title
+				end
+				
+				for x=pad_left+title_len+1,border_opts.width-1 do
+					line = line .. border_chars.top
+				end
+				
+				line = line .. border_chars.topright
+				
+			end
+		elseif y == border_opts.height then
+			line = border_chars.botleft
+			for x=2,border_opts.width-1 do
+				line = line .. border_chars.bot
+			end
+			line = line .. border_chars.botright
+			
+		else
+			line = border_chars.left
+			for x=2,border_opts.width-1 do
+				line = line .. " "
+			end
+			line = line .. border_chars.right
+		end
+		table.insert(border_text, line)
+	end
+	
+	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 	
 end
 
@@ -1225,6 +1231,7 @@ local function show_helper()
 	
 
 	table.insert(qflist, "  No warnings :)  ")
+	
 	local max_width = 0
 	for _, line in ipairs(qflist) do
 		max_width = math.max(max_width, vim.api.nvim_strwidth(line))
@@ -1271,90 +1278,7 @@ local function show_helper()
 	
 	local border_title = " ntangle helper "
 	local center_title = true
-	local border_text = {}
-	
-	local border_chars = {
-		topleft  = '╭',
-		topright = '╮',
-		top      = '─',
-		left     = '│',
-		right    = '│',
-		botleft  = '╰',
-		botright = '╯',
-		bot      = '─',
-	}
-	
-	-- local border_chars = {
-		-- topleft  = '╔',
-		-- topright = '╗',
-		-- top      = '═',
-		-- left     = '║',
-		-- right    = '║',
-		-- botleft  = '╚',
-		-- botright = '╝',
-		-- bot      = '═',
-	-- }
-	
-	for y=1,border_opts.height do
-		local line = ""
-		if y == 1 then
-			if not center_title then
-				line = border_chars.topleft .. border_chars.top
-				local title_len = 0
-				if border_title then
-					line = line .. border_title
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				for x=2+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				line = line .. border_chars.topright
-				
-			else
-				line = border_chars.topleft
-				
-				local title_len = 0
-				if border_title then
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				local pad_left = math.floor((border_opts.width-title_len)/2)
-				
-				for x=2,pad_left do
-					line = line .. border_chars.top
-				end
-				
-				if border_title then
-					line = line .. border_title
-				end
-				
-				for x=pad_left+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				
-				line = line .. border_chars.topright
-				
-			end
-		elseif y == border_opts.height then
-			line = border_chars.botleft
-			for x=2,border_opts.width-1 do
-				line = line .. border_chars.bot
-			end
-			line = line .. border_chars.botright
-			
-		else
-			line = border_chars.left
-			for x=2,border_opts.width-1 do
-				line = line .. " "
-			end
-			line = line .. border_chars.right
-			
-		end
-		table.insert(border_text, line)
-	end
-	
-	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+	fill_border(borderbuf, border_opts, center_title, border_title)
 	
 	
 	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
@@ -1603,90 +1527,7 @@ local function collectSection()
 	}
 	
 	local center_title = true
-	local border_text = {}
-	
-	local border_chars = {
-		topleft  = '╭',
-		topright = '╮',
-		top      = '─',
-		left     = '│',
-		right    = '│',
-		botleft  = '╰',
-		botright = '╯',
-		bot      = '─',
-	}
-	
-	-- local border_chars = {
-		-- topleft  = '╔',
-		-- topright = '╗',
-		-- top      = '═',
-		-- left     = '║',
-		-- right    = '║',
-		-- botleft  = '╚',
-		-- botright = '╝',
-		-- bot      = '═',
-	-- }
-	
-	for y=1,border_opts.height do
-		local line = ""
-		if y == 1 then
-			if not center_title then
-				line = border_chars.topleft .. border_chars.top
-				local title_len = 0
-				if border_title then
-					line = line .. border_title
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				for x=2+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				line = line .. border_chars.topright
-				
-			else
-				line = border_chars.topleft
-				
-				local title_len = 0
-				if border_title then
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				local pad_left = math.floor((border_opts.width-title_len)/2)
-				
-				for x=2,pad_left do
-					line = line .. border_chars.top
-				end
-				
-				if border_title then
-					line = line .. border_title
-				end
-				
-				for x=pad_left+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				
-				line = line .. border_chars.topright
-				
-			end
-		elseif y == border_opts.height then
-			line = border_chars.botleft
-			for x=2,border_opts.width-1 do
-				line = line .. border_chars.bot
-			end
-			line = line .. border_chars.botright
-			
-		else
-			line = border_chars.left
-			for x=2,border_opts.width-1 do
-				line = line .. " "
-			end
-			line = line .. border_chars.right
-			
-		end
-		table.insert(border_text, line)
-	end
-	
-	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+	fill_border(borderbuf, border_opts, center_title, border_title)
 	
 	
 	borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)

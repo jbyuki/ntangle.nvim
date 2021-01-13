@@ -1,5 +1,16 @@
 ##../ntangle_main
 @fill_buffer_with_border_characters+=
+fill_border(borderbuf, border_opts, center_title, border_title)
+
+@declare_functions+=
+local fill_border
+
+@functions+=
+function fill_border(borderbuf, border_opts, center_title, border_title)
+	@create_border_buffer
+end
+
+@create_border_buffer+=
 local border_text = {}
 
 local border_chars = {
