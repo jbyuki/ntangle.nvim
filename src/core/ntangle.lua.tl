@@ -281,7 +281,6 @@ if f then
 		if not line then break end
 		if lnum > 1 then
 			table.insert(assembled, line)
-			@add_count_for_part
 			@append_origin_to_assembled_array
 		end
 		lnum = lnum + 1
@@ -318,7 +317,6 @@ for lnum, line in ipairs(lines) do
 	if lnum > 1 then
 		table.insert(assembled, line)
 		@append_current_origin_to_assembled_array
-		@add_count_for_origin
 	end
 end
 

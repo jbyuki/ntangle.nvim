@@ -202,4 +202,6 @@ close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, 
 close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
 
 @if_no_text_to_display_add_some_info_text+=
-table.insert(qflist, "  No warnings :)  ")
+if #qflist == 0 then
+	table.insert(qflist, "  No warnings :)  ")
+end

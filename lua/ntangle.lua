@@ -905,7 +905,9 @@ local function show_helper()
 	end
 	
 
-	table.insert(qflist, "  No warnings :)  ")
+	if #qflist == 0 then
+		table.insert(qflist, "  No warnings :)  ")
+	end
 	local max_width = 0
 	for _, line in ipairs(qflist) do
 		max_width = math.max(max_width, vim.api.nvim_strwidth(line))
