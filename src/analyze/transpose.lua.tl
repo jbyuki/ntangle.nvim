@@ -44,6 +44,7 @@ local function collectSection()
 	@create_buffer_if_not_existent
 	@get_current_window_dimensions
 	@create_window_for_transpose
+	local border_title = "Transpose"
 	@create_border_around_transpose_window
 	@setup_transpose_buffer
 
@@ -94,7 +95,6 @@ local border_opts = {
 	style = 'minimal'
 }
 
-local border_title = "Transpose"
 local center_title = true
 @fill_buffer_with_border_characters
 
@@ -106,7 +106,7 @@ vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. 
 local borderwin 
 
 @keymap_transpose_buffer+=
-vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua navigateTo()<CR>', {noremap = true})
+vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
 
 @save_cursor_position+=
 local _, row, _, _ = unpack(vim.fn.getpos("."))
@@ -153,11 +153,14 @@ for _,line in ipairs(tangled) do
 end
 
 @functions+=
-function navigateTo()
+local function navigateTo()
 	@save_cursor_position
 	@close_transpose_window
 	@jump_to_linenumber
 end
+
+@export_symbols+=
+navigateTo = navigateTo,
 
 @close_transpose_window+=
 vim.api.nvim_win_close(transpose_win, true)

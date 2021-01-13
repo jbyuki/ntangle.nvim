@@ -98,5 +98,3 @@ if def.origin ~= curbuf then
 end
 
 vim.fn.setpos(".", {0, def.lnum, 0, 0})
-
--- debug_array(definitions)

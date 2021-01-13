@@ -36,13 +36,14 @@ goto = goto,
 
 @output_for_root_section+=
 local tangled = {}
-outputSectionsFull(fn, tangled, name)
+local main_file = filename or vim.api.nvim_buf_get_name(0)
+outputSectionsFull(main_file, tangled, name)
 
 @declare_functions+=
 local outputSectionsFull
 
 @functions+=
-function outputSectionsFull(fn, lines, name, prefix)
+function outputSectionsFull(filename, lines, name, prefix)
 	prefix = prefix or ""
 	@check_if_section_exists_otherwise_return_with_cur
 	@if_section_is_root_generate_fake_header
@@ -62,6 +63,9 @@ end
 
 @if_section_is_root_generate_fake_header+=
 if sections[name].root then
+	local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+	@if_star_replace_with_current_filename
+	@otherwise_put_node_name
 	@output_generated_header_fake
 end
 
@@ -72,7 +76,7 @@ end
 
 @if_reference_recursively_call_output_sections_full+=
 if line.linetype == LineType.REFERENCE then
-	outputSectionsFull(fn, lines, line.str, line.prefix .. prefix)
+	outputSectionsFull(filename, lines, line.str, line.prefix .. prefix)
 end
 
 @go_to_line+=
