@@ -1,6 +1,8 @@
 -- Generated from assemble.lua.tl, border_window.lua.tl, debug.lua.tl, find_root.lua.tl, go_definition.lua.tl, goto.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
+local assemble_nav = {}
+
 local sections = {}
 local curSection = nil
 
@@ -21,8 +23,6 @@ local borderwin
 
 local nagivationLines = {}
 
-local assemble_nav = {}
-
 local debug_array
 
 local get_section
@@ -40,6 +40,251 @@ local visitSections
 local searchOrphans
 
 local close_preview_autocmd
+
+local function show_assemble()
+	local lines = {}
+	local curassembly
+
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+
+	local filename = nil
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					local buffer = f:read("*all")
+					f:close()
+					
+					buffer = vim.split(buffer, "\n")
+					table.remove(buffer, 1)
+					offset[origin_path] = #assembled
+					
+					for lnum, line in ipairs(buffer) do
+						table.insert(assembled, line)
+						table.insert(origin, origin_path)
+						
+					end
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+
+		local _, row, _, _ = unpack(vim.fn.getpos("."))
+		
+		local ft = vim.api.nvim_buf_get_option(0, "ft")
+		
+		transpose_buf = vim.api.nvim_create_buf(false, true)
+		
+		local perc = 0.8
+		local win_width  = vim.api.nvim_win_get_width(0)
+		local win_height = vim.api.nvim_win_get_height(0)
+		local width = math.floor(perc*win_width)
+		local height = math.floor(perc*win_height)
+		
+		local opts = {
+			width = width,
+			height = height,
+			row = math.floor((win_height-height)/2),
+			col = math.floor((win_width-width)/2),
+			relative = "win",
+			win = vim.api.nvim_get_current_win(),
+		}
+		
+		transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+		
+		local border_title = "Assembly"
+		local borderbuf = vim.api.nvim_create_buf(false, true)
+		
+		local border_opts = {
+			relative = "win",
+			win = vim.api.nvim_get_current_win(),
+			width = opts.width+2,
+			height = opts.height+2,
+			col = opts.col-1,
+			row =  opts.row-1,
+			style = 'minimal'
+		}
+		
+		local center_title = true
+		local border_text = {}
+		
+		local border_chars = {
+			topleft  = '╭',
+			topright = '╮',
+			top      = '─',
+			left     = '│',
+			right    = '│',
+			botleft  = '╰',
+			botright = '╯',
+			bot      = '─',
+		}
+		
+		-- local border_chars = {
+			-- topleft  = '╔',
+			-- topright = '╗',
+			-- top      = '═',
+			-- left     = '║',
+			-- right    = '║',
+			-- botleft  = '╚',
+			-- botright = '╝',
+			-- bot      = '═',
+		-- }
+		
+		for y=1,border_opts.height do
+			local line = ""
+			if y == 1 then
+				if not center_title then
+					line = border_chars.topleft .. border_chars.top
+					local title_len = 0
+					if border_title then
+						line = line .. border_title
+						title_len = vim.api.nvim_strwidth(border_title)
+					end
+					
+					for x=2+title_len+1,border_opts.width-1 do
+						line = line .. border_chars.top
+					end
+					line = line .. border_chars.topright
+					
+				else
+					line = border_chars.topleft
+					
+					local title_len = 0
+					if border_title then
+						title_len = vim.api.nvim_strwidth(border_title)
+					end
+					
+					local pad_left = math.floor((border_opts.width-title_len)/2)
+					
+					for x=2,pad_left do
+						line = line .. border_chars.top
+					end
+					
+					if border_title then
+						line = line .. border_title
+					end
+					
+					for x=pad_left+title_len+1,border_opts.width-1 do
+						line = line .. border_chars.top
+					end
+					
+					line = line .. border_chars.topright
+					
+				end
+			elseif y == border_opts.height then
+				line = border_chars.botleft
+				for x=2,border_opts.width-1 do
+					line = line .. border_chars.bot
+				end
+				line = line .. border_chars.botright
+				
+			else
+				line = border_chars.left
+				for x=2,border_opts.width-1 do
+					line = line .. " "
+				end
+				line = line .. border_chars.right
+				
+			end
+			table.insert(border_text, line)
+		end
+		
+		vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
+		
+		
+		borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+		vim.api.nvim_set_current_win(transpose_win)
+		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+		
+		vim.api.nvim_buf_set_option(0, "ft", ft)
+
+		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
+		
+		vim.fn.setpos(".", {0, row+offset[fn]-1, 0, 0})
+		
+
+		assemble_nav = {}
+		for i=1,#assembled do
+			local org = origin[i]
+			local nav = {
+				lnum = i - offset[org] + 1,
+				origin = org,
+			}
+			table.insert(assemble_nav, nav)
+		end
+		
+		vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>u', '<cmd>lua require"ntangle".assembleNavigate()<CR>', {noremap = true})
+		
+	end
+end
+
+local function assembleNavigate()
+	local _, row, _, _ = unpack(vim.fn.getpos("."))
+	
+	vim.api.nvim_win_close(transpose_win, true)
+	
+	local nav = assemble_nav[row]
+	if nav.origin ~= vim.api.nvim_buf_get_name(0) then
+		vim.fn.nvim_command("e " .. nav.origin)
+	end
+	vim.fn.setpos(".", {0, nav.lnum, 0, 0})
+	
+end
 
 function debug_array(l)
 	if #l == 0 then
@@ -208,15 +453,15 @@ local function go_definition()
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
 				
-			end
-		end
-		
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
 				
 			end
 		end
@@ -340,15 +585,15 @@ local function goto(lnum)
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
 				
-			end
-		end
-		
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
 				
 			end
 		end
@@ -530,15 +775,15 @@ local function tangle(filename)
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
 				
-			end
-		end
-		
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
 				
 			end
 		end
@@ -916,6 +1161,16 @@ local function show_helper()
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
 				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
+				
 			end
 		end
 		
@@ -1233,16 +1488,15 @@ local function collectSection()
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
 				
-			end
-		end
-		
-
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
 				
 			end
 		end
@@ -1438,7 +1692,6 @@ local function collectSection()
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 	vim.api.nvim_buf_set_option(0, "ft", ft)
-	
 
 	local transpose_lines = {}
 	for _, l in ipairs(tangled) do
@@ -1468,252 +1721,11 @@ local function navigateTo()
 	
 end
 
-local function show_assemble()
-	local lines = {}
-	local curassembly
-
-	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-	
-	local line = lines[1] or ""
-	if string.match(lines[1], "^##%S*%s*$") then
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		local name = string.match(line, "^##(%S*)%s*$")
-		
-		curassembly = name
-		
-	end
-	
-
-	local filename = nil
-	if curassembly then
-		local fn = filename or vim.api.nvim_buf_get_name(0)
-		local parendir = vim.fn.fnamemodify(fn, ":p:h")
-		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
-		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
-		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
-		local path = vim.fn.fnamemodify(link_name, ":h")
-		if vim.fn.isdirectory(path) == 0 then
-			-- "p" means create also subdirectories
-			vim.fn.mkdir(path, "p") 
-		end
-		
-		
-		local assembled = {}
-		local valid_parts = {}
-		
-		local offset = {}
-		
-		local origin = {}
-		
-		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*"), "\n")
-		link_name = vim.fn.fnamemodify(link_name, ":p")
-		for _, part in ipairs(parts) do
-			if link_name ~= part then
-				local f = io.open(part, "r")
-				local origin_path = f:read("*line")
-				f:close()
-				
-				local f = io.open(origin_path, "r")
-				if f then
-					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
-					
-					local buffer = f:read("*all")
-					f:close()
-					
-					buffer = vim.split(buffer, "\n")
-					table.remove(buffer, 1)
-					offset[origin_path] = #assembled
-					
-					for lnum, line in ipairs(buffer) do
-						table.insert(assembled, line)
-						table.insert(origin, origin_path)
-						
-					end
-				end
-				
-			else
-				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
-				
-			end
-		end
-		
-		offset[fn] = #assembled
-		
-		for lnum, line in ipairs(lines) do
-			if lnum > 1 then
-				table.insert(assembled, line)
-				table.insert(origin, fn)
-				
-			end
-		end
-		
-
-		local _, row, _, _ = unpack(vim.fn.getpos("."))
-		
-		local ft = vim.api.nvim_buf_get_option(0, "ft")
-		
-		transpose_buf = vim.api.nvim_create_buf(false, true)
-		
-		local perc = 0.8
-		local win_width  = vim.api.nvim_win_get_width(0)
-		local win_height = vim.api.nvim_win_get_height(0)
-		local width = math.floor(perc*win_width)
-		local height = math.floor(perc*win_height)
-		
-		local opts = {
-			width = width,
-			height = height,
-			row = math.floor((win_height-height)/2),
-			col = math.floor((win_width-width)/2),
-			relative = "win",
-			win = vim.api.nvim_get_current_win(),
-		}
-		
-		transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-		
-		local border_title = "Assembly"
-		local borderbuf = vim.api.nvim_create_buf(false, true)
-		
-		local border_opts = {
-			relative = "win",
-			win = vim.api.nvim_get_current_win(),
-			width = opts.width+2,
-			height = opts.height+2,
-			col = opts.col-1,
-			row =  opts.row-1,
-			style = 'minimal'
-		}
-		
-		local center_title = true
-		local border_text = {}
-		
-		local border_chars = {
-			topleft  = '╭',
-			topright = '╮',
-			top      = '─',
-			left     = '│',
-			right    = '│',
-			botleft  = '╰',
-			botright = '╯',
-			bot      = '─',
-		}
-		
-		-- local border_chars = {
-			-- topleft  = '╔',
-			-- topright = '╗',
-			-- top      = '═',
-			-- left     = '║',
-			-- right    = '║',
-			-- botleft  = '╚',
-			-- botright = '╝',
-			-- bot      = '═',
-		-- }
-		
-		for y=1,border_opts.height do
-			local line = ""
-			if y == 1 then
-				if not center_title then
-					line = border_chars.topleft .. border_chars.top
-					local title_len = 0
-					if border_title then
-						line = line .. border_title
-						title_len = vim.api.nvim_strwidth(border_title)
-					end
-					
-					for x=2+title_len+1,border_opts.width-1 do
-						line = line .. border_chars.top
-					end
-					line = line .. border_chars.topright
-					
-				else
-					line = border_chars.topleft
-					
-					local title_len = 0
-					if border_title then
-						title_len = vim.api.nvim_strwidth(border_title)
-					end
-					
-					local pad_left = math.floor((border_opts.width-title_len)/2)
-					
-					for x=2,pad_left do
-						line = line .. border_chars.top
-					end
-					
-					if border_title then
-						line = line .. border_title
-					end
-					
-					for x=pad_left+title_len+1,border_opts.width-1 do
-						line = line .. border_chars.top
-					end
-					
-					line = line .. border_chars.topright
-					
-				end
-			elseif y == border_opts.height then
-				line = border_chars.botleft
-				for x=2,border_opts.width-1 do
-					line = line .. border_chars.bot
-				end
-				line = line .. border_chars.botright
-				
-			else
-				line = border_chars.left
-				for x=2,border_opts.width-1 do
-					line = line .. " "
-				end
-				line = line .. border_chars.right
-				
-			end
-			table.insert(border_text, line)
-		end
-		
-		vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
-		
-		
-		borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-		vim.api.nvim_set_current_win(transpose_win)
-		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-		
-		vim.api.nvim_buf_set_option(0, "ft", ft)
-		
-
-		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
-		
-		vim.fn.setpos(".", {0, row+offset[fn]-1, 0, 0})
-		
-
-		assemble_nav = {}
-		for i=1,#assembled do
-			local org = origin[i]
-			local nav = {
-				lnum = i - offset[org] + 1,
-				origin = org,
-			}
-			table.insert(assemble_nav, nav)
-		end
-		
-		vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>u', '<cmd>lua require"ntangle".assembleNavigate()<CR>', {noremap = true})
-		
-	end
-end
-
-local function assembleNavigate()
-	local _, row, _, _ = unpack(vim.fn.getpos("."))
-	
-	vim.api.nvim_win_close(transpose_win, true)
-	
-	local nav = assemble_nav[row]
-	if nav.origin ~= vim.api.nvim_buf_get_name(0) then
-		vim.fn.nvim_command("e " .. nav.origin)
-	end
-	vim.fn.setpos(".", {0, nav.lnum, 0, 0})
-end
-
 return {
+show_assemble = show_assemble,
+
+assembleNavigate = assembleNavigate,
+
 go_definition = go_definition,
 
 goto = goto,
@@ -1729,10 +1741,6 @@ show_helper = show_helper,
 collectSection = collectSection,
 
 navigateTo = navigateTo,
-
-show_assemble = show_assemble,
-
-assembleNavigate = assembleNavigate,
 
 }
 

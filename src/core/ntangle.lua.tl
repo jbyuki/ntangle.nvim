@@ -23,7 +23,6 @@ local function tangle(filename)
 		@if_any_assembly_write_link_file
 		local assembled = {}
 		@glob_all_links_and_assemble_except_current
-		@append_current_buffer_to_the_assembled
 		local lines = assembled 
 		@set_filename_of_assembled
 
@@ -311,6 +310,7 @@ for _, part in ipairs(parts) do
 		@append_lines_from_part_file
 	else
 		@add_to_parts_for_generated
+		@append_current_buffer_to_the_assembled
 	end
 end
 

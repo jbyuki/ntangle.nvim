@@ -18,8 +18,6 @@ local function collectSection()
 		local assembled = {}
 		@glob_all_links_and_assemble_except_current
 
-		@append_current_buffer_to_the_assembled
-
 		local rootlines = lines
 		local lines = assembled
 		@clear_sections
