@@ -53,8 +53,6 @@ local function show_assemble()
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
 		
-		local name = string.match(line, "^##(%S*)%s*$")
-		
 		curassembly = name
 		
 	end
@@ -345,7 +343,7 @@ function resolve_root_section(containing)
 		table.remove(open)
 		explored[name] = true
 
-		if sections[name].root then
+		if sections[name] and sections[name].root then
 			roots[name] = true
 		end
 		
@@ -387,8 +385,6 @@ local function tangle(filename)
 
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
-		local name = string.match(line, "^##(%S*)%s*$")
-		
 		local name = string.match(line, "^##(%S*)%s*$")
 		
 		curassembly = name
@@ -487,7 +483,11 @@ local function tangle(filename)
 					fn = parendir .. "/tangle/" .. tail
 				
 				else
-					fn = parendir .. "/" .. name
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
 				end
 				
 				lines = {}
@@ -557,7 +557,11 @@ local function tangle(filename)
 					fn = parendir .. "/tangle/" .. tail
 				
 				else
-					fn = parendir .. "/" .. name
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
 				end
 				
 				lines = {}
@@ -670,7 +674,11 @@ local function getRootFilename()
 		fn = parendir .. "/tangle/" .. tail
 	
 	else
-		fn = parendir .. "/" .. name
+		if string.find(name, "/") then
+			fn = parendir .. "/" .. name
+		else
+			fn = parendir .. "/tangle/" .. name
+		end
 	end
 	
 	return fn
@@ -778,8 +786,6 @@ local function show_helper()
 
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
-		local name = string.match(line, "^##(%S*)%s*$")
-		
 		local name = string.match(line, "^##(%S*)%s*$")
 		
 		curassembly = name
@@ -1027,8 +1033,6 @@ local function collectSection()
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
 		
-		local name = string.match(line, "^##(%S*)%s*$")
-		
 		curassembly = name
 		
 	end
@@ -1249,7 +1253,11 @@ function outputSectionsFull(filename, lines, name, prefix)
 			fn = parendir .. "/tangle/" .. tail
 		
 		else
-			fn = parendir .. "/" .. name
+			if string.find(name, "/") then
+				fn = parendir .. "/" .. name
+			else
+				fn = parendir .. "/tangle/" .. name
+			end
 		end
 		
 		if string.match(filename, "lua.tl$") then

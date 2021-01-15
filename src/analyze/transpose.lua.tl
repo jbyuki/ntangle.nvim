@@ -16,7 +16,7 @@ local function collectSection()
 		@construct_path_for_link_file
 		
 		local assembled = {}
-		@glob_all_links_and_assemble_except_current
+		@glob_all_links_and_assemble
 
 		local rootlines = lines
 		local lines = assembled

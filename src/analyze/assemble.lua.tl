@@ -11,7 +11,7 @@ local function show_assemble()
 	if curassembly then
 		@construct_path_for_link_file
 		local assembled = {}
-		@glob_all_links_and_assemble_except_current
+		@glob_all_links_and_assemble
 
 		@save_cursor_position
 		@save_current_filetype

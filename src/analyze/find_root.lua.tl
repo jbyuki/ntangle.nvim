@@ -60,7 +60,7 @@ function resolve_root_section(containing)
 end
 
 @if_root_add_to_roots+=
-if sections[name].root then
+if sections[name] and sections[name].root then
 	roots[name] = true
 end
 

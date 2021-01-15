@@ -22,7 +22,7 @@ local function tangle(filename)
 	if curassembly then
 		@if_any_assembly_write_link_file
 		local assembled = {}
-		@glob_all_links_and_assemble_except_current
+		@glob_all_links_and_assemble
 		local lines = assembled 
 		@set_filename_of_assembled
 
@@ -65,7 +65,11 @@ if name == "*" then
 
 @otherwise_put_node_name+=
 else
-	fn = parendir .. "/" .. name
+	if string.find(name, "/") then
+		fn = parendir .. "/" .. name
+	else
+		fn = parendir .. "/tangle/" .. name
+	end
 end
 
 @declare_functions+=
@@ -215,7 +219,6 @@ lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 local line = lines[1] or ""
 if string.match(lines[1], "^##%S*%s*$") then
 	@extract_assembly_name
-	@extract_assembly_name
 	@set_as_current_assembly
 end
 
@@ -251,7 +254,7 @@ link_file:write(fn)
 link_file:close()
 
 
-@glob_all_links_and_assemble_except_current+=
+@glob_all_links_and_assemble+=
 path = vim.fn.fnamemodify(path, ":p")
 local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
 link_name = vim.fn.fnamemodify(link_name, ":p")
@@ -293,7 +296,7 @@ end
 @remove_link_file+=
 os.remove(part)
 
-@glob_all_links_and_assemble_except_current-=
+@glob_all_links_and_assemble-=
 local origin = {}
 
 @append_origin_to_assembled_array+=
@@ -302,7 +305,7 @@ table.insert(origin, origin_path)
 @append_current_origin_to_assembled_array+=
 table.insert(origin, fn)
 
-@glob_all_links_and_assemble_except_current-=
+@glob_all_links_and_assemble-=
 local offset = {}
 
 @put_offset_in_assembled_for_part+=
@@ -346,7 +349,7 @@ elseif string.match(fn, "vim$") then
 	table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 end
 
-@glob_all_links_and_assemble_except_current-=
+@glob_all_links_and_assemble-=
 local valid_parts = {}
 
 @add_to_parts_for_generated+=
