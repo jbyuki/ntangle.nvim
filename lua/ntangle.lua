@@ -172,6 +172,7 @@ local function show_assemble()
 		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 		
 		vim.api.nvim_buf_set_option(0, "ft", ft)
+		
 
 		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
 		
@@ -1154,6 +1155,7 @@ local function collectSection()
 		
 		parse(lines)
 		
+		filename = vim.api.nvim_buf_get_name(0)
 
 		local rootlines = lines
 		local containing = get_section(rootlines, row)
@@ -1224,6 +1226,7 @@ local function collectSection()
 	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 	vim.api.nvim_buf_set_option(0, "ft", ft)
+	
 
 	local transpose_lines = {}
 	for _, l in ipairs(tangled) do

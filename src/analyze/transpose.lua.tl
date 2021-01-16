@@ -32,6 +32,7 @@ local function collectSection()
 	else
 		@clear_sections
 		@read_file_line_by_line_from_variable
+		@set_filename_of_current_buf
 
 		local rootlines = lines
 		@get_containing_root_section
@@ -240,3 +241,6 @@ local ft = vim.api.nvim_buf_get_option(0, "ft")
 
 @setup_transpose_buffer+=
 vim.api.nvim_buf_set_option(0, "ft", ft)
+
+@set_filename_of_current_buf+=
+filename = vim.api.nvim_buf_get_name(0)
