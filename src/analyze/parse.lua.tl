@@ -113,6 +113,7 @@ local l = {
 else
 	@check_that_sections_is_not_empty
 	@create_text_line
+	@quit_if_no_current_section
 	@add_line_to_section
 end
 
@@ -160,3 +161,8 @@ local refs = {}
 @create_line_reference+=
 refs[name] = refs[name] or {}
 table.insert(refs[name], curSection.str)
+
+@quit_if_no_current_section+=
+if not curSection then
+	return
+end

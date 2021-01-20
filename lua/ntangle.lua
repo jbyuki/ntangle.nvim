@@ -756,6 +756,7 @@ function parse(lines)
 			
 			refs[name] = refs[name] or {}
 			table.insert(refs[name], curSection.str)
+			
 			linkedlist.push_back(curSection.lines, l)
 			
 		
@@ -771,6 +772,9 @@ function parse(lines)
 			
 			l.lnum = lnum
 			
+			if not curSection then
+				return
+			end
 			linkedlist.push_back(curSection.lines, l)
 			
 		end
