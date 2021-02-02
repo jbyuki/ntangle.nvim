@@ -375,7 +375,7 @@ local function tangle(filename)
 	local curassembly
 	local lines = {}
 	if filename then
-		for line in io.open(lines) do
+		for line in io.lines(filename) do
 			table.insert(lines, line)
 		end
 		

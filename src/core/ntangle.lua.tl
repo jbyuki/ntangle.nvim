@@ -208,7 +208,7 @@ elseif string.match(filename, "vim.tl$") then
 end
 
 @read_lines_from_filename+=
-for line in io.open(lines) do
+for line in io.lines(filename) do
 	table.insert(lines, line)
 end
 
