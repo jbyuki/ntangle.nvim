@@ -1,4 +1,4 @@
--- Generated from assemble.lua.tl, border_window.lua.tl, debug.lua.tl, find_root.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -24,6 +24,8 @@ local borderwin
 local nagivationLines = {}
 
 local fill_border
+
+local contextmenu_open
 
 local debug_array
 
@@ -291,6 +293,65 @@ function fill_border(borderbuf, border_opts, center_title, border_title)
 	
 	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
 	
+end
+
+function contextmenu_open(candidates, callback)
+	local max_width = 0
+	for _, el in ipairs(candidates) do
+		max_width = math.max(max_width, vim.api.nvim_strwidth(el))
+	end
+	
+	local buf = vim.api.nvim_create_buf(false, true)
+	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
+	
+	local opts = {
+		relative = "cursor",
+		width = max_width,
+		height = #candidates,
+		col = 2,
+		row =  2,
+		style = 'minimal'
+	}
+	
+	contextmenu_win = vim.api.nvim_open_win(buf, false, opts)
+	
+	local borderbuf = vim.api.nvim_create_buf(false, true)
+	
+	local border_opts = {
+		relative = "cursor",
+		width = opts.width+2,
+		height = opts.height+2,
+		col = 1,
+		row =  1,
+		style = 'minimal'
+	}
+	
+	fill_border(borderbuf, border_opts, false, "")
+	
+	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+	
+	vim.api.nvim_buf_set_lines(buf, 0, -1, true, candidates)
+	
+	vim.api.nvim_buf_set_keymap(buf, 'n', '<CR>', '<cmd>lua require"ntangle".select_contextmenu()<CR>', {noremap = true})
+	
+	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
+	vim.api.nvim_win_set_option(contextmenu_win, "winblend", 30)
+	vim.api.nvim_win_set_option(contextmenu_win, "cursorline", true)
+	vim.api.nvim_set_current_win(contextmenu_win)
+	contextmenu_contextmenu = callback
+	
+	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+	
+end
+
+local function select_contextmenu()
+	local row = vim.fn.line(".")
+	if contextmenu_contextmenu then
+		vim.api.nvim_win_close(contextmenu_win, true)
+		
+		contextmenu_contextmenu(row)
+		contextmenu_contextmenu = nil
+	end
 end
 
 function debug_array(l)
@@ -1045,7 +1106,7 @@ local function collectSection()
 	
 	local tangled = {}
 	local filename
-	local jumpline
+	local jumplines = {}
 
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
@@ -1137,12 +1198,11 @@ local function collectSection()
 			local _, l = unpack(line)
 			local relpos = (l.lnum or -1) - offset[fn]
 			if relpos == row-1 then
-				jumpline = lnum
-				break
+				table.insert(jumplines, lnum)
 			end
 		end
 		
-		assert(jumpline, "Could not jump to line")
+		assert(#jumplines > 0, "Could not jump to line")
 		
 		navigationLines = {}
 		for lnum,line in ipairs(tangled) do 
@@ -1160,6 +1220,7 @@ local function collectSection()
 		parse(lines)
 		
 		filename = vim.api.nvim_buf_get_name(0)
+		
 
 		local rootlines = lines
 		local containing = get_section(rootlines, row)
@@ -1170,12 +1231,11 @@ local function collectSection()
 		for lnum, line in ipairs(tangled) do
 			local _, l = unpack(line)
 			if l.lnum == row then
-				jumpline = lnum
-				break
+				table.insert(jumplines, lnum)
 			end
 		end
 		
-		assert(jumpline, "Could not find line to jump")
+		assert(#jumplines > 0, "Could not find line to jump")
 		
 		navigationLines = {}
 		local curorigin = vim.api.nvim_buf_get_name(0)
@@ -1189,62 +1249,77 @@ local function collectSection()
 
 	local ft = vim.api.nvim_buf_get_option(0, "ft")
 	
-	transpose_buf = vim.api.nvim_create_buf(false, true)
-	
-	local perc = 0.8
-	local win_width  = vim.api.nvim_win_get_width(0)
-	local win_height = vim.api.nvim_win_get_height(0)
-	local width = math.floor(perc*win_width)
-	local height = math.floor(perc*win_height)
-	
-	local opts = {
-		width = width,
-		height = height,
-		row = math.floor((win_height-height)/2),
-		col = math.floor((win_width-width)/2),
-		relative = "win",
-		win = vim.api.nvim_get_current_win(),
-	}
-	
-	transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-	
-	local border_title = "Transpose"
-	local borderbuf = vim.api.nvim_create_buf(false, true)
-	
-	local border_opts = {
-		relative = "win",
-		win = vim.api.nvim_get_current_win(),
-		width = opts.width+2,
-		height = opts.height+2,
-		col = opts.col-1,
-		row =  opts.row-1,
-		style = 'minimal'
-	}
-	
-	local center_title = true
-	fill_border(borderbuf, border_opts, center_title, border_title)
-	
-	
-	borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-	vim.api.nvim_set_current_win(transpose_win)
-	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-	
-	vim.api.nvim_buf_set_option(0, "ft", ft)
-	
 
-	local transpose_lines = {}
-	for _, l in ipairs(tangled) do
-		local prefix, line = unpack(l)
-		table.insert(transpose_lines, prefix .. line.str)
+	local selected = function(row) 
+		local jumpline = jumplines[row]
+
+		transpose_buf = vim.api.nvim_create_buf(false, true)
+		
+		local perc = 0.8
+		local win_width  = vim.api.nvim_win_get_width(0)
+		local win_height = vim.api.nvim_win_get_height(0)
+		local width = math.floor(perc*win_width)
+		local height = math.floor(perc*win_height)
+		
+		local opts = {
+			width = width,
+			height = height,
+			row = math.floor((win_height-height)/2),
+			col = math.floor((win_width-width)/2),
+			relative = "win",
+			win = vim.api.nvim_get_current_win(),
+		}
+		
+		transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+		
+		local border_title = "Transpose"
+		local borderbuf = vim.api.nvim_create_buf(false, true)
+		
+		local border_opts = {
+			relative = "win",
+			win = vim.api.nvim_get_current_win(),
+			width = opts.width+2,
+			height = opts.height+2,
+			col = opts.col-1,
+			row =  opts.row-1,
+			style = 'minimal'
+		}
+		
+		local center_title = true
+		fill_border(borderbuf, border_opts, center_title, border_title)
+		
+		
+		borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+		vim.api.nvim_set_current_win(transpose_win)
+		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+		
+		vim.api.nvim_buf_set_option(0, "ft", ft)
+		
+
+		local transpose_lines = {}
+		for _, l in ipairs(tangled) do
+			local prefix, line = unpack(l)
+			table.insert(transpose_lines, prefix .. line.str)
+		end
+		
+		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
+		
+		vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
+		
+
+		vim.fn.setpos(".", {0, jumpline, 0, 0})
+		
 	end
-	
-	vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
-	
-	vim.fn.setpos(".", {0, jumpline, 0, 0})
-	
 
-	vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
-	
+	if #jumplines == 1 then
+		selected(1)
+	else
+		local options = {}
+		for _, lnum in ipairs(jumplines) do
+			table.insert(options, "L" .. lnum)
+		end
+		contextmenu_open(options, selected)
+	end
 end
 
 function outputSectionsFull(filename, lines, name, prefix)
@@ -1307,6 +1382,8 @@ return {
 show_assemble = show_assemble,
 
 assembleNavigate = assembleNavigate,
+
+select_contextmenu = select_contextmenu,
 
 tangle = tangle,
 

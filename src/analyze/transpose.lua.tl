@@ -10,7 +10,7 @@ local function collectSection()
 	
 	local tangled = {}
 	local filename
-	local jumpline
+	local jumplines = {}
 
 	if curassembly then
 		@construct_path_for_link_file
@@ -42,17 +42,24 @@ local function collectSection()
 	end
 
 	@save_current_filetype
-	@create_buffer_if_not_existent
-	@get_current_window_dimensions
-	@create_window_for_transpose
-	local border_title = "Transpose"
-	@create_border_around_transpose_window
-	@setup_transpose_buffer
 
-	@put_lines_in_buffer
-	@jump_to_lines_in_transpose_buffer
+	local selected = function(row) 
+		local jumpline = jumplines[row]
 
-	@keymap_transpose_buffer
+		@create_buffer_if_not_existent
+		@get_current_window_dimensions
+		@create_window_for_transpose
+		local border_title = "Transpose"
+		@create_border_around_transpose_window
+		@setup_transpose_buffer
+
+		@put_lines_in_buffer
+		@keymap_transpose_buffer
+
+		@jump_to_lines_in_transpose_buffer
+	end
+
+	@open_context_menu_if_multiple_or_jump_directly
 end
 
 @export_symbols+=
@@ -163,12 +170,11 @@ end
 for lnum, line in ipairs(tangled) do
 	local _, l = unpack(line)
 	if l.lnum == row then
-		jumpline = lnum
-		break
+		table.insert(jumplines, lnum)
 	end
 end
 
-assert(jumpline, "Could not find line to jump")
+assert(#jumplines > 0, "Could not find line to jump")
 
 @put_lines_in_buffer+=
 local transpose_lines = {}
@@ -219,12 +225,11 @@ for lnum, line in ipairs(tangled) do
 	local _, l = unpack(line)
 	local relpos = (l.lnum or -1) - offset[fn]
 	if relpos == row-1 then
-		jumpline = lnum
-		break
+		table.insert(jumplines, lnum)
 	end
 end
 
-assert(jumpline, "Could not jump to line")
+assert(#jumplines > 0, "Could not jump to line")
 
 @save_lines_for_navigation_assembly+=
 navigationLines = {}
@@ -244,3 +249,14 @@ vim.api.nvim_buf_set_option(0, "ft", ft)
 
 @set_filename_of_current_buf+=
 filename = vim.api.nvim_buf_get_name(0)
+
+@open_context_menu_if_multiple_or_jump_directly+=
+if #jumplines == 1 then
+	selected(1)
+else
+	local options = {}
+	for _, lnum in ipairs(jumplines) do
+		table.insert(options, "L" .. lnum)
+	end
+	contextmenu_open(options, selected)
+end
