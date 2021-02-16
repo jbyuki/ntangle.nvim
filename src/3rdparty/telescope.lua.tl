@@ -1,3 +1,4 @@
+##telescope
 @../../lua/ntangle/telescope.lua=
 @requires
 @script_variables

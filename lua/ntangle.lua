@@ -1,4 +1,4 @@
--- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl using ntangle.nvim
+-- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, ntangle.lua.tl, parse.lua.tl, show_helper.lua.tl, transpose.lua.tl, treesitter.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -22,6 +22,8 @@ local transpose_win, transpose_buf
 local borderwin 
 
 local nagivationLines = {}
+
+local ntangle_required
 
 local fill_border
 
@@ -1378,6 +1380,33 @@ local function navigateTo()
 	
 end
 
+local function enable_syntax_highlighting()
+	local bufname = vim.api.nvim_buf_get_name(0)
+	local ext = vim.fn.fnamemodify(bufname, ":e:e:r")
+	
+	if not ntangle_required then
+		local parser_dll = vim.api.nvim_get_runtime_file("ntangle.so", "all")
+		if #parser_dll > 0 then
+			local success = vim.treesitter.require_language("ntangle", parser_dll[1])
+			if success then
+				ntangle_required = true
+			end
+		end
+		
+	end
+	local opts = {
+		queries = {
+			["ntangle"] = "(codeline) @combined @" .. ext
+		}
+	}
+	local buf = vim.api.nvim_get_current_buf()
+	local parser = vim.treesitter.get_parser(buf, "ntangle", opts)
+	
+	vim.treesitter.highlighter.new(parser, {})
+	vim.api.nvim_command("set ft=" .. ext)
+	
+end
+
 return {
 show_assemble = show_assemble,
 
@@ -1396,6 +1425,8 @@ show_helper = show_helper,
 collectSection = collectSection,
 
 navigateTo = navigateTo,
+
+enable_syntax_highlighting = enable_syntax_highlighting,
 
 }
 
