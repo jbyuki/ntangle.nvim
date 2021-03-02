@@ -245,7 +245,7 @@ end
 local ft = vim.api.nvim_buf_get_option(0, "ft")
 
 @setup_transpose_buffer+=
-vim.api.nvim_buf_set_option(0, "ft", ft)
+vim.api.nvim_buf_set_option(0, "ft", ext_to_lang[ft] or ft)
 
 @set_filename_of_current_buf+=
 filename = vim.api.nvim_buf_get_name(0)

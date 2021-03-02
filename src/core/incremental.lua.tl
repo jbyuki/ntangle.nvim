@@ -1,0 +1,229 @@
+##../ntangle_main
+-- @parse_variables+=
+-- local buf_attach = {}
+-- 
+-- @functions+=
+-- local function create_buf_attach(buf)
+  -- if buf_attach[buf] then return end
+-- 
+  -- @set_as_buf_attach
+-- 
+  -- local initial = true
+  -- @attach_variables
+  -- vim.api.nvim_buf_attach(buf, false, { 
+    -- on_lines = function(_, _, firstline, lastline, new_lastline, _) 
+      -- if initial then
+        -- local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+        -- for lnum,line in ipairs(lines) do
+          -- @insert_new_line_initial
+        -- end
+        -- initial = false
+      -- else
+        -- for i=firstline+1,lastline do
+          -- @remove_current_line
+        -- end
+        -- for i=firstline+1,new_lastline do
+          -- @insert_new_line
+        -- end
+      -- end
+    -- end
+  -- })
+-- end
+-- 
+-- @export_symbols+=
+-- create_buf_attach = create_buf_attach,
+-- @o+=
+-- local
+-- 
+-- @set_as_buf_attach+=
+-- buf_attach[buf] = true
+-- 
+-- @declare_functions+=
+-- local insert_line, delete_line
+-- 
+-- @functions+=
+-- function insert_line(references, tangle_index, tangle_lines, source_index, source_lines, i, line)
+  -- @get_line_type
+  -- local modified
+  -- if type == LineType.REFERENCE then
+    -- @if_section_is_defined_add_new_lines
+  -- elseif type == LineType.SECTION then
+    -- @delete_following_lines_from_previous_containing_section
+    -- @insert_lines_into_new_section_and_modify_referenced
+  -- elseif type == LineType.TEXT then
+    -- @compute_line_number_recursively
+    -- @add_text_to_containing_section
+    -- @update_containing_section_part_length
+    -- @insert_text_line_into_source
+    -- @reformat_modified_for_text_line
+    -- @update_section_total_length
+  -- end
+  -- return modified
+-- end
+-- 
+-- function delete_line(tangle_index, tangle_lines, i)
+  -- @get_line_to_delete
+  -- @get_line_type
+  -- if type == LineType.REFERENCE then
+    -- @if_section_is_defined_remove_lines
+  -- elseif type == LineType.SECTION then
+    -- @delete_following_lines_from_previous_containing_section
+    -- @insert_lines_into_current_containing_section
+  -- elseif type == LineType.TEXT then
+    -- @remove_text_from_containing_section
+  -- end
+-- end
+-- 
+-- @declare_functions+=
+-- local get_line_type
+-- 
+-- @functions+=
+-- function get_line_type(line)
+  -- if string.match(line, "^%s*@@") then
+    -- return LineType.TEXT
+  -- elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+    -- return LineType.SECTION
+  -- elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+    -- return LineType.REFERENCE
+  -- else
+    -- return LineType.TEXT
+  -- end
+-- end
+-- 
+-- 
+-- @get_line_type+=
+-- local type = get_line_type(line)
+-- 
+-- @declare_functions+=
+-- local get_line_number
+-- 
+-- @functions+=
+-- function get_line_number(tangle_index, references, i)
+  -- @get_relative_offset_in_section_part
+  -- @if_no_offset_found_return_none
+  -- @get_relative_offset_in_section
+  -- @if_section_is_root_return_offset
+  -- @otherwise_recursively_search_for_references
+-- end
+-- 
+-- @get_relative_offset_in_section_part+=
+-- local offset, section_part
+-- local tangle_line = tangle_index[i-1]
+-- local rel = 0
+-- 
+-- while tangle_line do
+  -- local line = tangle_line.data
+  -- if line.type == LineType.SECTION then
+    -- offset = rel
+    -- section_part = line
+    -- break
+  -- end
+  -- tangle_line = tangle_line.prev
+-- end
+-- 
+-- @if_no_offset_found_return_none+=
+-- if not offset then
+  -- break
+-- end
+-- 
+-- @get_relative_offset_in_section+=
+-- local node = section_part.node
+-- while node.prev do
+  -- node = node.prev
+  -- offset = offset + node.data.len
+-- end
+-- 
+-- @if_section_is_root_return_offset+=
+-- if node.data.root then
+  -- return {{ node.data.name, offset }}
+-- end
+-- 
+-- @otherwise_recursively_search_for_references+=
+-- local result = {}
+-- for _, ref in ipairs(references[node.data.name]) do
+  -- local ret = get_line_number(tangle_index, references,ref)
+  -- for _, r in ipairs(ret) do
+    -- table.insert(result, r)
+  -- end
+-- end
+-- 
+-- for _, r in ipairs(result) do
+  -- r[1] = r[1] + offset
+-- end
+-- 
+-- return result
+-- 
+-- @compute_line_number_recursively+=
+-- local changes = get_line_number(tangle_index, tangle_lines, references, i)
+-- 
+-- @add_text_to_containing_section+=
+-- local tangle_line = {
+  -- str = line,
+  -- type = LineType.TEXT,
+-- }
+-- 
+-- local new_node
+-- 
+-- if i == 0 then
+  -- new_node = linkedlist.push_front(tangle_lines, list, tangle_line)
+-- else
+  -- local before = tangle_index[i]
+  -- new_node = linkedlist.insert_after(tangle_lines, before, tangle_line)
+-- end
+-- 
+-- table.insert(tangle_index, i+1, new_node)
+-- 
+-- @declare_functions+=
+-- local get_containing_section_part
+-- 
+-- @functions+=
+-- function get_containing_section_part(tangle_index, i)
+  -- local node = tangle_index[i]
+  -- while node do
+    -- if node.data.type == LineType.SECTION then
+      -- return node.data
+    -- end
+    -- node = node.prev
+  -- end
+-- end
+-- 
+-- @update_containing_section_part_length+=
+-- local section = get_containing_section_part(tangle_index, i)
+-- section.len = section.len + 1
+-- 
+-- @insert_text_line_into_source+=
+-- local new_node
+-- if i == 0 then
+  -- new_node = linkedlist.push_front(source_lines, line)
+-- else
+  -- local before = source_index[i]
+  -- new_node = linkedlist.push_front(source_lines, before, line)
+-- end
+-- table.insert(source_index, i+1, new_node)
+-- 
+-- @declare_functions+=
+-- local update_length
+-- 
+-- @functions+=
+-- function update_length(lengths, name, delta)
+  -- lengths[name] = lengths[name] + delta
+  -- local parent = {}
+  -- for _, ref in ipairs(references[name]) do
+  -- end
+-- end
+-- 
+-- @update_section_total_length+=
+-- 
+-- @delete_following_lines_from_previous_containing_section+=
+-- local range_start = i+1
+-- local range_end = #tangle_index
+-- 
+-- for j=i+1,#tangle_index do
+  -- local type = tangle_index[i].data.type
+  -- if type == LineType.SECTION then
+    -- range_end = j
+    -- break
+  -- end
+-- end
+-- 
+-- 

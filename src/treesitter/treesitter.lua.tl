@@ -2,6 +2,10 @@
 @parse_variables+=
 local ntangle_required
 
+local ext_to_lang = {
+  ["rs"] = "rust",
+}
+
 @functions+=
 local function enable_syntax_highlighting()
 	@get_language_extension
@@ -21,7 +25,8 @@ local bufname = vim.api.nvim_buf_get_name(0)
 local ext = vim.fn.fnamemodify(bufname, ":e:e:r")
 
 @set_filetype_to_original_language+=
-vim.api.nvim_command("set ft=" .. ext)
+local lang = ext_to_lang[ext] or ext
+vim.api.nvim_command("set ft=" .. lang)
 
 @require_ntangle_language+=
 local parser_dll = vim.api.nvim_get_runtime_file("ntangle.so", "all")
