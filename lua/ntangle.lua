@@ -211,7 +211,7 @@ local function assembleNavigate()
 	
 	local nav = assemble_nav[row]
 	if nav.origin ~= vim.api.nvim_buf_get_name(0) then
-		vim.fn.nvim_command("e " .. nav.origin)
+		vim.api.nvim_command("e " .. nav.origin)
 	end
 	vim.fn.setpos(".", {0, nav.lnum, 0, 0})
 end
