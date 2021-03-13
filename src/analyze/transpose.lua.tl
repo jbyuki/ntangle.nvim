@@ -216,7 +216,7 @@ vim.api.nvim_win_close(transpose_win, true)
 @jump_to_linenumber+=
 local n = navigationLines[row]
 if vim.api.nvim_buf_get_name(0) ~= n.origin then
-	vim.fn.nvim_command("e " .. n.origin)
+	vim.api.nvim_command("e " .. n.origin)
 end
 vim.fn.setpos(".", {0, n.lnum, 0, 0})
 
