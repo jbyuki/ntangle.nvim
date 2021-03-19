@@ -71,6 +71,7 @@ local function show_assemble()
 	local filename = nil
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
@@ -691,6 +692,7 @@ local function tangle(filename)
 	
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
@@ -974,6 +976,7 @@ local function getRootFilename()
 	
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
@@ -1308,6 +1311,7 @@ local function show_helper()
 	local filename
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
@@ -1556,6 +1560,7 @@ local function collectSection()
 
 	if curassembly then
 		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")

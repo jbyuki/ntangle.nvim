@@ -287,6 +287,7 @@ curassembly = name
 
 @construct_path_for_link_file+=
 local fn = filename or vim.api.nvim_buf_get_name(0)
+fn = vim.fn.fnamemodify(fn, ":p")
 local parendir = vim.fn.fnamemodify(fn, ":p:h")
 local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
