@@ -1,4 +1,4 @@
--- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, incremental.lua.tl, ntangle.lua.tl, parse.lua.tl, search_cache.lua.tl, show_helper.lua.tl, transpose.lua.tl, treesitter.lua.tl using ntangle.nvim
+-- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, incremental.lua.tl, mapping.lua.tl, ntangle.lua.tl, parse.lua.tl, search_cache.lua.tl, show_helper.lua.tl, transpose.lua.tl, treesitter.lua.tl using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -667,6 +667,142 @@ function resolve_root_section(containing)
 	assert(vim.tbl_count(roots) == 1, "multiple roots or none")
 	local name = vim.tbl_keys(roots)[1]
 	return name
+end
+
+local function get_location_list()
+	local curassembly
+	local lines = {}
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
+
+  local _, row, _, _ = unpack(vim.fn.getpos("."))
+  
+  local line = lines[1] or ""
+  if string.match(lines[1], "^##%S*%s*$") then
+  	local name = string.match(line, "^##(%S*)%s*$")
+  	
+  	curassembly = name
+  	
+  end
+  
+
+	local tangled = {}
+	local filename
+
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+
+		local rootlines = lines
+		local lines = assembled
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+
+		local containing = get_section(rootlines, row)
+		containing = resolve_root_section(containing)
+		
+
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+		outputSectionsFull(filename, tangled, containing)
+		
+
+    for _, line in ipairs(tangled) do
+      local prefix, l = unpack(line)
+      if l and l.lnum then
+        l.lnum = l.lnum + 1
+      end
+    end
+
+    return tangled
+  else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		filename = vim.api.nvim_buf_get_name(0)
+		
+
+		local rootlines = lines
+		local containing = get_section(rootlines, row)
+		containing = resolve_root_section(containing)
+		
+		outputSectionsFull(filename, tangled, containing)
+		
+
+    return tangled
+  end
 end
 
 local function tangle(filename)
@@ -1863,6 +1999,8 @@ show_assemble = show_assemble,
 assembleNavigate = assembleNavigate,
 
 select_contextmenu = select_contextmenu,
+
+get_location_list = get_location_list,
 
 tangle = tangle,
 
