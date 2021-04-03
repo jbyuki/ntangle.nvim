@@ -175,9 +175,12 @@ the source file `hello.lua` with the following content:
 <
 This makes the creation of the new files very easy for code modularity.
 
+The programmer is expected to almost abuse this functionality to make a 
+lot of small files but which have a precise filename.
+
 File names can be very explicit in the using a concrete name. For example, 
-if a module is responsible for intializing memory, it can be called
-  `init_memory.*.tl`. The filename should give a clue of what the code is
+if a module is responsible for intializing memory linked lists, it can be called
+  `init_memory_linked_list.*.tl`. The filename should give a clue of what the code is
   doing in a very precise and direct wording.
 
 ==========================================================================
