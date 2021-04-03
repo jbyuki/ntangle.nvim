@@ -1,0 +1,324 @@
+*ntangle.txt*		
+
+             NTANGLE REFERENCE MANUAL~
+                                
+                    by jbyuki~
+
+
+ntangle.nvim is a literate programming plug-in for Neovim. It
+has a minimalistic syntax and a programmer centric design.
+
+==========================================================================
+An introduction to literate programming     *ntangle-literate-programming*
+
+
+                                       (printable)
+                      ┌──────────┐      ┌───────┐
+              cweave  │          │  TeX │       │
+             ┌───────►│  foo.tex ├─────►│foo.dvi│
+             │        │          │      │       │
+   ┌───────┐ │        └──────────┘      └───────┘
+   │       ├─┘
+   │ foo.w │
+   │       ├─┐                         (executable)
+   └───────┘ │        ┌──────────┐      ┌───────┐
+             │        │          │  cc  │       │
+             └───────►│  foo.c   ├─────►│ foo   │
+              ctangle │          │      │       │
+                      └──────────┘      └───────┘
+      
+      Figure 1: CWEB Toolchain by Donald Knuth
+
+The primary idea of literate programming invented by Donald Knuth
+was to change the way of coding. Instead of writing programs
+for the computers to read, we should write programs for other
+humans to read. 
+
+In the modern era, literate programming while still being not
+a dominant form as may be Knuth imagined it, it has still taken
+many form with tools like Jupyter Notebook, org-mode or custom
+tools made by programmers.
+
+==========================================================================
+An introduction to ntangle.nvim                            *ntangle-intro*
+
+ntangle.nvim is yet another tool for literate programming but tries to 
+put an accent on these concepts.
+
+  * An overal minimalistic approach
+  * An intuitive syntax
+  * Easy to use
+  * Complete integration with a text editor
+
+For example, this code illustrates the very simplistic syntax design of
+ntangle.nvim.
+
+>
+  ##snippets
+  @../lua/snippets/init.lua=
+  local M = {}
+  @implement
+  return M
+
+  @implement+=
+  function M.version()
+    return "0.1"
+  end
+<
+
+A programmer would probably guess even without knowing the details, how
+the generated code will be done.
+
+Furthermore, the weave aspect of literate programming has been removed in
+favor of a more concise and productive coding experience.
+
+The emphasis of ntangle.nvim is to provide the programmer the ability to 
+"tangle" code but nothing more. The programmer is expected to experiment 
+and use this feature in novel way to enhance his code quality and 
+productivity.  Some common techniques will be explained in this guide 
+but as the syntax is very minimalistic, the possilities to organize, 
+arrange code are endless and the programmer should probably use the one 
+which suits him the best.
+
+
+==========================================================================
+Assembly in ntangle.nvim                                 *ntangle-assembly*
+
+Much like the programming language, an assembly in ntangle.nvim is a
+collection of files written for ntangle.nvim which are "assembled to 
+form a larger source code". 
+
+To indicate to ntangle.nvim which files belong together, the file line 
+should specify a namespace.
+
+>
+  line 1     ##snippets
+  line 2     ...
+<
+
+All files in the same folder, which have the same namespace will be 
+assembled together.
+
+Files in subfolders can also be part of the same assembly by specifing a
+relative path.
+
+>
+  line 1     ../##snippets
+  line 2     ...
+<
+This makes the creation of the new files very easy for code modularity.
+
+File names can be very explicit in the using a concrete name. For example, 
+if a module is responsible for intializing memory, it can be called
+  `init_memory.*.tl`. The filename should give a clue of what the code is
+  doing in a very precise and direct wording.
+
+==========================================================================
+Syntax in ntangle.nvim                                     *ntangle-syntax*
+
+Root section~
+
+Root sections will generate a source file. They are defined with the 
+following syntax:
+
+>
+  @main.c=
+  #include <stdio.h>
+  ...
+<
+
+The `@` symbol at the beginning indicates it's a section. The name of the
+section can contain the characters `[0-9a-zA-Z_./-]`. The section name is
+followed by the `=` assignement symbol.
+
+Every root section will generate a file.
+
+Root section can also specify relative path to generate the file in a
+different directory.
+
+>
+  @../src/main.c=
+  #include <stdio.h>
+  ...
+
+Usually if the literate source file only generates a single file, the assembly
+name is at the top followed by the root section.
+
+>
+  line 1    ##helloworld
+  line 2    @main.c=
+  line 3    #include <stdio.h>
+            ...
+<
+
+This will generate the file main.c. Further module can append code to main.c
+by defining other assemblies in the same namespace.
+
+Multiple files can also be generated by a single literate source file.
+
+>
+  ##helloworld
+  @module.h=
+  #pragma once
+  ...
+  @module.c=
+  ...
+<
+This provides a simple way to code in a single file in programming 
+languages such as C/C++.
+
+Plain section~
+
+Plain sections will not be output. They serve as intemediary section for
+splitting up code. They are defined with the following syntax:
+
+>
+  @do_init+=
+  init_display()
+  ...
+<
+
+Similar to root sections, they have the same syntax except the `+=` the add
+assigment operator at the end. This indicates that more code can be appended
+afterwards in the code.
+
+>
+  @do_init+=
+  init_display()
+  ...
+
+  @do_init+=
+  init_sound()
+  ...
+<
+
+Code can also be prepended to a plain section using the `-=` operator.
+
+Section reference~
+
+Plain section can be referenced in other section with the references. This
+forms the basis of literate programming tangling.
+
+>
+  @main.c=
+  void main()
+  {
+    @do_init
+    @do_something
+    @do_deinit
+  }
+<
+Section references which are not defined which just be ignored during
+tangling. This allows to define section references in advance without worrying
+about implementation. 
+
+All sections should be referenced and eventually in a root section so that
+they will be output.
+
+==========================================================================
+File generation in ntangle.nvim                        *ntangle-generation*
+
+The most important question might be how files are generated with
+ntangle.nvim. By default, any file which has the extension `.*.tl` will be
+recognised by ntnagle.nvim as a literate source code.
+
+On save, ntangle.nvim will automatically generate the source files.
+
+Root sections can be of the form:
+
+*  `@main.c=` : This will generate main.c in the `tangle/` folder besides 
+   the literate source code.
+*  `@./main.c=` : This will generate main.c besides the literate source 
+   code without creating a tangle/ folder
+*  `@src/main.c=` : This will generate main.c in a `src/` folder besides 
+   the literate source code
+*  `@../src/main.c=` : This will generate main.c in a `src/` folder in the
+   parent folder of the literate source code
+*  `@*=` : This will generate a file which has the same name as the 
+   literate source file or the assembly without `.tl` extension in 
+   the `tangle/` directory.
+
+If assemblies are used, relative paths are always taken from the namespace
+specified in the assembly. Having a complex file structure can lead to 
+bugs so it should be limited.
+
+==========================================================================
+Transposition in ntangle.nvim                      *ntangle-transposition*
+
+This feature of ntangle.nvim provides with a quick way to switch between 
+the untangled/tangled source code. Invoking `:TangleCollect` will open 
+a float window with the cursor placed in the untangled source code. 
+
+The user can jump back to the tangled code by placing the cursor on a 
+line and invoking `:TangleCollect` again. It is handy to bind this 
+functionality to a shortcut as it will be used often.
+
+For example if the |leader| key is defined:
+>
+  nnoremap <leader>i :TangleCollect<CR> 
+<
+This provides a way to jump to a line number even in the tangled source 
+code. 
+
+  * Invoke `:TangleCollect`
+  * Jump to a line number using |gg|
+  * Invoke `:TangleCollect` again
+
+Multiple lines in the untangled source code can be generated by the 
+tangled file. In this case, ntangle.nvim will open a popup to choose which
+line to jump to.
+
+==========================================================================
+Assembly view in ntangle.nvim                       *ntangle-assembly-view*
+
+The assembly view similar to transposition offers a helper tool for jump 
+to the complete assembled file. It is invoked using the command 
+>
+  :lua require"ntangle".show_assemble()
+<
+It is also encouraged to bind this functionality to a key shortcut as it 
+will be used often.
+
+>
+  nnoremap <leader>u :lua require"ntangle".show_assemble()<CR>
+<
+
+This will place the cursor in the complete assembled source code. A second
+invocation of the command will jump back to the corresponding assembly 
+source file.
+
+This functionality can be used in conjunction with |star|, to quickly jump
+to section references and section defintions.
+
+==========================================================================
+LSP with ntangle.nvim                                         *ntangle-lsp*
+
+
+Only limited support is possible for now. See
+
+  https://github.com/jbyuki/ntangle-lsp.nvim
+
+for an experimental project which supports only clangd but can be extended
+  to other languages. Please open an issue if you need this feature.
+
+==========================================================================
+ntangle.nvim tree-sitter                               *ntangle-tree-sitter*
+
+Proper syntax highlighting is currently difficult. Tree-sitter has an 
+advanced parsing method which would require also that the source code
+is properly tangled before tree-sitter's parsing.
+
+Currently there is no implementation which supports this well. See 
+
+  https://github.com/jbyuki/tree-sitter-ntangle
+
+For a parser which uses tree-sitter's embedded parsers. This gives a 
+temporary solution to syntax highlighting.
+
+==========================================================================
+ntangle.nvim dap                                             *ntangle-dap*
+
+There exists currently no known extension to do this. The user is expected
+to jump back to the untangled source file to do any debugging.
+
+ vim:tw=78:ts=8:ft=help:norl:
