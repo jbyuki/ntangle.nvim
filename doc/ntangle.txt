@@ -99,12 +99,79 @@ should specify a namespace.
 All files in the same folder, which have the same namespace will be 
 assembled together.
 
+ntangle.nvim goes through two steps:
+  
+  1. Assemble the files into a larger `.tl` file.
+  2. Tangle the assembly `.tl` to generate the source files.
+
 Files in subfolders can also be part of the same assembly by specifing a
 relative path.
 
 >
   line 1     ../##snippets
   line 2     ...
+<
+
+Example assembly~
+
+The files have the following directory structure.
+
+>
+  file1.lua
+  file2.lua
+  dir/
+    file3.lua
+<
+
+With the following content:
+
+`file1.lua`
+>
+  ##hello
+  @hello.lua=
+  print("hello")
+
+  @do_something
+
+`file2.lua`
+>
+  ##hello
+  @do_something+=
+  print("world")
+<
+`dir/file3.lua`
+>
+  ##../hello
+  @do_something+=
+  print("!")
+<
+
+ntangle.nvim will first assemble the files into a larger literate 
+source file `hello.lua.tl` with the concatenated content.
+
+`hello.lua.tl`
+>
+  @hello.lua=
+  print("hello")
+
+  @do_something
+
+  @do_something+=
+  print("world")
+
+  @do_something+=
+  print("!")
+<
+The actual order of concatenation is not defined but deterministic.
+
+ntangle.nvim will now procede to the tangling phase which will generate
+the source file `hello.lua` with the following content:
+
+`hello.lua`
+>
+  print("hello")
+  print("world")
+  print("!")
 <
 This makes the creation of the new files very easy for code modularity.
 
