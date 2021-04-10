@@ -1,4 +1,5 @@
-@*=
+##../buildcache
+@../lua/buildcache.lua=
 @requires
 @declare_functions
 @functions
@@ -19,7 +20,7 @@ build = build,
 
 @get_filelist+=
 local tangle_code_dir = "~/fakeroot/code"
-local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.tl" })
+local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
 
 @foreach_file_get_all_sections+=
 for file in vim.gsplit(filelist, "\n") do

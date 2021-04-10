@@ -1,7 +1,5 @@
-@desc+=
-"This is actually the implementation of a double linked list"
-
-@*=
+##../linkedlist
+@../lua/linkedlist.lua=
 linkedlist = {}
 @functions
 

@@ -113,7 +113,7 @@ end
 tangleAll = tangleAll,
 
 @get_filelist+=
-local filelist = vim.api.nvim_call_function("glob", { "**/*.tl" })
+local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
 
 @check_file_is_modified+=
 local modified = false
@@ -254,9 +254,9 @@ elseif string.match(fn, "vim$") then
 end
 
 @output_generated_header_fake+=
-if string.match(filename, "lua.tl$") then
+if string.match(filename, "lua.t$") then
 	table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
-elseif string.match(filename, "vim.tl$") then
+elseif string.match(filename, "vim.t$") then
 	table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 end
 
@@ -310,7 +310,7 @@ link_file:close()
 
 @glob_all_links_and_assemble+=
 path = vim.fn.fnamemodify(path, ":p")
-local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 link_name = vim.fn.fnamemodify(link_name, ":p")
 for _, part in ipairs(parts) do
 	if link_name ~= part then

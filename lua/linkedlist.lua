@@ -1,3 +1,4 @@
+-- Generated from linkedlist.lua.t using ntangle.nvim
 linkedlist = {}
 function linkedlist.push_back(list, el)
 	local node = { data = el }

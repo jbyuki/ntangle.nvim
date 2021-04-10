@@ -1,4 +1,4 @@
--- Generated from telescope.lua.tl using ntangle.nvim
+-- Generated from telescope.lua.t using ntangle.nvim
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
 local sorters = require("telescope.sorters")

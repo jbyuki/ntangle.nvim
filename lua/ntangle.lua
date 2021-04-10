@@ -1,4 +1,4 @@
--- Generated from assemble.lua.tl, border_window.lua.tl, contextmenu.lua.tl, debug.lua.tl, find_root.lua.tl, incremental.lua.tl, mapping.lua.tl, ntangle.lua.tl, parse.lua.tl, search_cache.lua.tl, show_helper.lua.tl, transpose.lua.tl, treesitter.lua.tl using ntangle.nvim
+-- Generated from assemble.lua.t, border_window.lua.t, contextmenu.lua.t, debug.lua.t, find_root.lua.t, incremental.lua.t, mapping.lua.t, ntangle.lua.t, parse.lua.t, search_cache.lua.t, show_helper.lua.t, transpose.lua.t, treesitter.lua.t using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -92,7 +92,7 @@ local function show_assemble()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -713,7 +713,7 @@ local function get_location_list()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -855,7 +855,7 @@ local function tangle(filename)
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -1088,7 +1088,7 @@ function outputSections(lines, file, name, prefix)
 end
 
 local function tangleAll()
-	local filelist = vim.api.nvim_call_function("glob", { "**/*.tl" })
+	local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
 	
 	for file in vim.gsplit(filelist, "\n") do
 		tangle(file)
@@ -1139,7 +1139,7 @@ local function getRootFilename()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -1469,7 +1469,7 @@ local function show_helper()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -1718,7 +1718,7 @@ local function collectSection()
 		local origin = {}
 		
 		path = vim.fn.fnamemodify(path, ":p")
-		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.tl"), "\n")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
 		for _, part in ipairs(parts) do
 			if link_name ~= part then
@@ -1929,9 +1929,9 @@ function outputSectionsFull(filename, lines, name, prefix)
 			end
 		end
 		
-		if string.match(filename, "lua.tl$") then
+		if string.match(filename, "lua.t$") then
 			table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
-		elseif string.match(filename, "vim.tl$") then
+		elseif string.match(filename, "vim.t$") then
 			table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 		end
 		

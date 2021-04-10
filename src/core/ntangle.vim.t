@@ -10,7 +10,7 @@ let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
 @register_filetype_detection+=
-autocmd BufWrite *.tl call v:lua.ntangle.tangle()
+autocmd BufWrite *.t call v:lua.ntangle.tangle()
 
 @load_lua_module+=
 lua ntangle = require("ntangle")

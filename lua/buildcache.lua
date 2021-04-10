@@ -1,6 +1,7 @@
+-- Generated from buildcache.lua.t using ntangle.nvim
 local function build(filename)
 	local tangle_code_dir = "~/fakeroot/code"
-	local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.tl" })
+	local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
 	
 	local globalcache = {}
 	

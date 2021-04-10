@@ -1,4 +1,4 @@
-" Generated from ntangle.vim.tl using ntangle.nvim
+" Generated from ntangle.vim.t using ntangle.nvim
 let g:tangle_dir = "tangle"
 let g:tangle_cache_file = expand("~/tangle_cache.txt")
 
@@ -23,7 +23,7 @@ function! TangleShowTodo()
 	call v:lua.ntangle.show_todo(bufnr("%"))
 endfunction
 
-autocmd BufWrite *.tl call v:lua.ntangle.tangle()
+autocmd BufWrite *.t call v:lua.ntangle.tangle()
 
 lua ntangle = require("ntangle")
 
