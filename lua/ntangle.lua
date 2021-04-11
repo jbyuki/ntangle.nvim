@@ -1,4 +1,4 @@
--- Generated from assemble.lua.t, border_window.lua.t, contextmenu.lua.t, debug.lua.t, find_root.lua.t, incremental.lua.t, mapping.lua.t, ntangle.lua.t, parse.lua.t, search_cache.lua.t, show_helper.lua.t, transpose.lua.t, treesitter.lua.t using ntangle.nvim
+-- Generated from assemble.lua.t, border_window.lua.t, contextmenu.lua.t, debug.lua.t, find_root.lua.t, incremental.lua.t, mapping.lua.t, ntangle.lua.t, parse.lua.t, search_cache.lua.t, show_helper.lua.t, to_buf.lua.t, transpose.lua.t, treesitter.lua.t using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -1673,6 +1673,193 @@ function close_preview_autocmd(events, winnr)
   vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_win_close, "..winnr..", true)")
 end
 
+local function tangle_to_buf(bufs)
+	local curassembly
+	local lines = {}
+  lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  
+
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+	end
+	
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		local lines = assembled 
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+		    if not bufs[fn] then
+		      bufs[fn] = vim.api.nvim_create_buf(false, true)
+		    end
+		    
+				vim.api.nvim_buf_set_lines(bufs[fn], 0, -1, true, lines)
+				
+			end
+		end
+		
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+		    if not bufs[fn] then
+		      bufs[fn] = vim.api.nvim_create_buf(false, true)
+		    end
+		    
+		    vim.api.nvim_buf_set_lines(bufs[fn], 0, -1, true, lines)
+		    
+			end
+		end
+	end
+end
+
 local function collectSection()
 	local curassembly
 	local lines = {}
@@ -2011,6 +2198,8 @@ getRootFilename = getRootFilename,
 search_cache = search_cache,
 jump_cache = jump_cache,
 show_helper = show_helper,
+
+tangle_to_buf = tangle_to_buf,
 
 collectSection = collectSection,
 
