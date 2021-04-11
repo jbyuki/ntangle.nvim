@@ -51,6 +51,8 @@ local searchOrphans
 
 local close_preview_autocmd
 
+local outputSectionsWithLookup
+
 local outputSectionsFull
 
 local function show_assemble()
@@ -1675,6 +1677,7 @@ end
 
 local function tangle_to_buf(bufs)
 	local curassembly
+  local lookup = {}
 	local lines = {}
   lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
   
@@ -1794,12 +1797,14 @@ local function tangle_to_buf(bufs)
 					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 				end
 				
-				outputSections(lines, file, name, "")
 		    if not bufs[fn] then
 		      bufs[fn] = vim.api.nvim_create_buf(false, true)
 		    end
+		    local buf = bufs[fn]
 		    
-				vim.api.nvim_buf_set_lines(bufs[fn], 0, -1, true, lines)
+		    lookup[buf] = {}
+				outputSectionsWithLookup(lines, file, name, "", lookup[buf])
+				vim.api.nvim_buf_set_lines(buf, 0, -1, true, lines)
 				
 			end
 		end
@@ -1848,14 +1853,38 @@ local function tangle_to_buf(bufs)
 					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
 				end
 				
-				outputSections(lines, file, name, "")
 		    if not bufs[fn] then
 		      bufs[fn] = vim.api.nvim_create_buf(false, true)
 		    end
+		    local buf = bufs[fn]
 		    
-		    vim.api.nvim_buf_set_lines(bufs[fn], 0, -1, true, lines)
+		    lookup[buf] = {}
+				outputSectionsWithLookup(lines, file, name, "", lookup[buf])
+		    vim.api.nvim_buf_set_lines(buf, 0, -1, true, lines)
 		    
 			end
+		end
+		
+	end
+  return lookup
+end
+
+function outputSectionsWithLookup(lines, file, name, prefix, lookup)
+	if not sections[name] then
+		return
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.TEXT then
+			  -- one-to-many relation but only save last
+			  lookup[line.lnum] = #lines+1
+				lines[#lines+1] = prefix .. line.str
+			end
+			if line.linetype == LineType.REFERENCE then
+				outputSectionsWithLookup(lines, file, line.str, prefix .. line.prefix, lookup)
+			end
+			
 		end
 	end
 end
