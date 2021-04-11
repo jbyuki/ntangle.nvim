@@ -101,8 +101,8 @@ assembled together.
 
 ntangle.nvim goes through two steps:
   
-  1. Assemble the files into a larger `.tl` file.
-  2. Tangle the assembly `.tl` to generate the source files.
+  1. Assemble the files into a larger `.t` file.
+  2. Tangle the assembly `.t` to generate the source files.
 
 Files in subfolders can also be part of the same assembly by specifing a
 relative path.
@@ -147,9 +147,9 @@ With the following content:
 <
 
 ntangle.nvim will first assemble the files into a larger literate 
-source file `hello.lua.tl` with the concatenated content.
+source file `hello.lua.t` with the concatenated content.
 
-`hello.lua.tl`
+`hello.lua.t`
 >
   @hello.lua=
   print("hello")
@@ -180,7 +180,7 @@ lot of small files but which have a precise filename.
 
 File names can be very explicit in the using a concrete name. For example, 
 if a module is responsible for intializing memory linked lists, it can be called
-  `init_memory_linked_list.*.tl`. The filename should give a clue of what the code is
+  `init_memory_linked_list.*.t`. The filename should give a clue of what the code is
   doing in a very precise and direct wording.
 
 ==========================================================================
@@ -289,7 +289,7 @@ they will be output.
 File generation in ntangle.nvim                        *ntangle-generation*
 
 The most important question might be how files are generated with
-ntangle.nvim. By default, any file which has the extension `.*.tl` will be
+ntangle.nvim. By default, any file which has the extension `.*.t` will be
 recognised by ntnagle.nvim as a literate source code.
 
 On save, ntangle.nvim will automatically generate the source files.
@@ -305,7 +305,7 @@ Root sections can be of the form:
 *  `@../src/main.c=` : This will generate main.c in a `src/` folder in the
    parent folder of the literate source code
 *  `@*=` : This will generate a file which has the same name as the 
-   literate source file or the assembly without `.tl` extension in 
+   literate source file or the assembly without `.t` extension in 
    the `tangle/` directory.
 
 If assemblies are used, relative paths are always taken from the namespace
