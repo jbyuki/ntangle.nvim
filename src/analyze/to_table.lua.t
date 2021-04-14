@@ -52,7 +52,7 @@ end
 @set_untangled_lines_to_table+=
 tables[fn] = lines
 
-@output_sections_to_buffers+=
+@output_sections_to_tables+=
 filename = filename or vim.api.nvim_buf_get_name(0)
 local parendir = vim.fn.fnamemodify(filename, ":p:h" )
 for name, section in pairs(sections) do

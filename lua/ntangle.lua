@@ -1865,54 +1865,6 @@ local function tangle_to_buf(bufs)
 			end
 		end
 		
-		filename = filename or vim.api.nvim_buf_get_name(0)
-		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
-		for name, section in pairs(sections) do
-			if section.root then
-				local fn
-				if name == "*" then
-					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
-					fn = parendir .. "/tangle/" .. tail
-				
-				else
-					if string.find(name, "/") then
-						fn = parendir .. "/" .. name
-					else
-						fn = parendir .. "/tangle/" .. name
-					end
-				end
-				
-				lines = {}
-				if string.match(fn, "lua$") then
-					local relname
-					if filename then
-						relname = filename
-					else
-						relname = vim.api.nvim_buf_get_name(0)
-					end
-					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
-					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
-				elseif string.match(fn, "vim$") then
-					local relname
-					if filename then
-						relname = filename
-					else
-						relname = vim.api.nvim_buf_get_name(0)
-					end
-					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
-					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
-				end
-				
-		    if not tables[fn] then
-		      tables[fn] = {}
-		    end
-		    
-		    lookup[fn] = {}
-				outputSectionsWithLookup(lines, file, name, "", lookup[fn])
-		    tables[fn] = lines
-		    
-			end
-		end
 	end
   return lookup
 end
@@ -2076,6 +2028,54 @@ local function tangle_to_table(tables)
 		
 		parse(lines)
 		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+		    if not tables[fn] then
+		      tables[fn] = {}
+		    end
+		    
+		    lookup[fn] = {}
+				outputSectionsWithLookup(lines, file, name, "", lookup[fn])
+		    tables[fn] = lines
+		    
+			end
+		end
 	end
   return lookup
 end
