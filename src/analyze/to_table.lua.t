@@ -38,19 +38,19 @@ for name, section in pairs(sections) do
 		lines = {}
 		@output_generated_header_assembly
     @create_table_if_none_for_output_path
-    lookup[buf] = {}
-		outputSectionsWithLookup(lines, file, name, "", lookup[buf])
+    lookup[fn] = {}
+		outputSectionsWithLookup(lines, file, name, "", lookup[fn])
 		@set_untangled_lines_to_table
 	end
 end
 
 @create_table_if_none_for_output_path+=
-if not bufs[fn] then
-  bufs[fn] = {}
+if not tables[fn] then
+  tables[fn] = {}
 end
 
 @set_untangled_lines_to_table+=
-bufs[fn] = lines
+tables[fn] = lines
 
 @output_sections_to_buffers+=
 filename = filename or vim.api.nvim_buf_get_name(0)
@@ -63,8 +63,8 @@ for name, section in pairs(sections) do
 		lines = {}
 		@output_generated_header
     @create_table_if_none_for_output_path
-    lookup[buf] = {}
-		outputSectionsWithLookup(lines, file, name, "", lookup[buf])
+    lookup[fn] = {}
+		outputSectionsWithLookup(lines, file, name, "", lookup[fn])
     @set_untangled_lines_to_table
 	end
 end

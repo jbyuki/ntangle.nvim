@@ -1903,13 +1903,13 @@ local function tangle_to_buf(bufs)
 					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
 				end
 				
-		    if not bufs[fn] then
-		      bufs[fn] = {}
+		    if not tables[fn] then
+		      tables[fn] = {}
 		    end
 		    
-		    lookup[buf] = {}
-				outputSectionsWithLookup(lines, file, name, "", lookup[buf])
-		    bufs[fn] = lines
+		    lookup[fn] = {}
+				outputSectionsWithLookup(lines, file, name, "", lookup[fn])
+		    tables[fn] = lines
 		    
 			end
 		end
@@ -2059,13 +2059,13 @@ local function tangle_to_table(tables)
 					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 				end
 				
-		    if not bufs[fn] then
-		      bufs[fn] = {}
+		    if not tables[fn] then
+		      tables[fn] = {}
 		    end
 		    
-		    lookup[buf] = {}
-				outputSectionsWithLookup(lines, file, name, "", lookup[buf])
-				bufs[fn] = lines
+		    lookup[fn] = {}
+				outputSectionsWithLookup(lines, file, name, "", lookup[fn])
+				tables[fn] = lines
 				
 			end
 		end
