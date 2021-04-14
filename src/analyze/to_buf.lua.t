@@ -2,8 +2,8 @@
 @functions+=
 local function tangle_to_buf(bufs)
 	local curassembly
-  local lookup = {}
 	local lines = {}
+  local lookup = {}
   @read_lines_from_buffer
 
 	@read_assembly_name_if_any
@@ -92,6 +92,6 @@ end
 @if_line_is_text_output_it_lookup+=
 if line.linetype == LineType.TEXT then
   -- one-to-many relation but only save last
-  lookup[line.lnum] = #lines+1
+  lookup[line.lnum] = { #lines+1, string.len(prefix) }
 	lines[#lines+1] = prefix .. line.str
 end
