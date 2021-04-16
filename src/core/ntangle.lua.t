@@ -165,6 +165,8 @@ local function getRootFilename()
 	local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
   local roots = {}
 
+  local curassembly
+
   @read_lines_from_buffer
 	@read_assembly_name_if_any
 	if curassembly then
@@ -188,7 +190,7 @@ local function getRootFilename()
   end
 
   if #roots > 1 then
-    print("multiple roots " .. vim.inspect(roots))
+    print("multiple roots !")
   end
 
 	return roots[1]
