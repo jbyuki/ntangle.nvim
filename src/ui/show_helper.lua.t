@@ -34,6 +34,7 @@ local function show_helper()
 	@create_float_window_for_helper
 	@create_float_window_border_window
 	@put_text_in_helper_window
+  @attach_virtual_text_helper_window
 	@attach_autocommand_to_close_helper_on_movement
 end
 
@@ -81,7 +82,7 @@ end
 
 @output_undefined_section_references+=
 for name, lnum in pairs(notdefined) do
-	table.insert(qflist, name .. " is empty" )
+	table.insert(qflist, { name, " is empty" } )
 end
 
 @declare_functions+=
@@ -126,13 +127,13 @@ end
 
 @output_orphan_sections+=
 for name, lnum in pairs(orphans) do
-	table.insert(qflist, name .. " is an orphan section")
+	table.insert(qflist, { name , " orphan section" })
 end
 
 @compute_max_width_for_helper_window+=
 local max_width = 0
 for _, line in ipairs(qflist) do
-	max_width = math.max(max_width, vim.api.nvim_strwidth(line))
+	max_width = math.max(max_width, vim.api.nvim_strwidth(line[1] .. " " .. line[2]) + 2)
 end
 
 @create_float_window_for_helper+=
@@ -187,7 +188,12 @@ vim.api.nvim_win_set_option(win, "winblend", 30)
 vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 
 @put_text_in_helper_window+=
-vim.api.nvim_buf_set_lines(buf, 0, -1, true, qflist)
+local newlines = {}
+for _, p in ipairs(qflist) do
+  table.insert(newlines, p[1])
+end
+
+vim.api.nvim_buf_set_lines(buf, 0, -1, true, newlines)
 
 @declare_functions+=
 local close_preview_autocmd
@@ -203,5 +209,14 @@ close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, 
 
 @if_no_text_to_display_add_some_info_text+=
 if #qflist == 0 then
-	table.insert(qflist, "  No warnings :)  ")
+	table.insert(qflist, { "  No warnings :)  ", "" })
+end
+
+@attach_virtual_text_helper_window+=
+local ns_id = vim.api.nvim_create_namespace("")
+for lnum, p in ipairs(qflist) do
+  vim.api.nvim_buf_set_extmark(buf, ns_id, lnum-1, 0, {
+    virt_text = {{ p[2], "NonText"}}
+  })
+  table.insert(newlines, p[1])
 end
