@@ -290,7 +290,7 @@ File generation in ntangle.nvim                        *ntangle-generation*
 
 The most important question might be how files are generated with
 ntangle.nvim. By default, any file which has the extension `.*.t` will be
-recognised by ntnagle.nvim as a literate source code.
+recognised by ntangle.nvim as a literate source code.
 
 On save, ntangle.nvim will automatically generate the source files.
 
@@ -374,16 +374,31 @@ for an experimental project which supports only clangd but can be extended
 ==========================================================================
 ntangle.nvim tree-sitter                               *ntangle-tree-sitter*
 
-Proper syntax highlighting is currently difficult. Tree-sitter has an 
-advanced parsing method which would require also that the source code
-is properly tangled before tree-sitter's parsing.
+An experimental plugin which tries to support this is avaiable here:
 
-Currently there is no implementation which supports this well. See 
+  https://github.com/jbyuki/ntangle-ts.nvim
+
+At the time of writing, the support is still unstable and will likely
+break on some occasion.
+
+For a more safe approach but only partially correct syntax highlighting,
+it's possible to compile a custom treesitter parser available here:
 
   https://github.com/jbyuki/tree-sitter-ntangle
 
-For a parser which uses tree-sitter's embedded parsers. This gives a 
-temporary solution to syntax highlighting.
+The following configuration enables ntangle syntax highlighting after
+installing the ntangle treesitter parser.
+
+>
+  augroup ntangletreesitter
+    autocmd!
+    autocmd BufRead *.t lua require"ntangle".enable_syntax_highlighting()
+  augroup END
+<
+
+This will only concatenate source code and not provide correct syntax
+highlighting all the time. Use the first plugin to have better syntax
+highlighting.
 
 ==========================================================================
 ntangle.nvim dap                                             *ntangle-dap*
