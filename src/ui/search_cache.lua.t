@@ -16,8 +16,6 @@ end
 
 @export_symbols+=
 search_cache = search_cache,
-@o+=
-local
 
 @get_ntangle_cache_location+=
 local filename = vim.g.tangle_cache_file
@@ -51,8 +49,6 @@ end
 
 @export_symbols+=
 jump_cache = jump_cache,
-@o+=
-local
 
 @get_current_cursor_line+=
 local row, _ = unpack(vim.api.nvim_win_get_cursor(0))

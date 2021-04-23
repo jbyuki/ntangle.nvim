@@ -196,16 +196,6 @@ local function getRootFilename()
 	return roots[1]
 end
 
-@if_first_line_is_assembly_skip+=
-local line = vim.api.nvim_buf_get_lines(0, 0, 1, true)[1]
-local lnum = 0
-if string.match(line, "^##") then
-  lnum = 1
-end
-
-@get_first_line_section_name+=
-line = vim.api.nvim_buf_get_lines(0, lnum, lnum+1, true)[1]
-
 @export_symbols+=
 getRootFilename = getRootFilename,
 

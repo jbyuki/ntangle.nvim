@@ -60,7 +60,7 @@ vim.api.nvim_buf_set_lines(buf, 0, -1, true, candidates)
 @attach_keymap_to_context_menu+=
 vim.api.nvim_buf_set_keymap(buf, 'n', '<CR>', '<cmd>lua require"ntangle".select_contextmenu()<CR>', {noremap = true})
 
-@script_variables+=
+@parse_variables+=
 local contextmenu_contextmenu
 
 @save_contextmenu_callback+=
@@ -79,7 +79,7 @@ end
 @export_symbols+=
 select_contextmenu = select_contextmenu,
 
-@script_variables+=
+@parse_variables+=
 local contextmenu_win
 
 @close_contextmenu_window+=

@@ -46,9 +46,6 @@ end
 @export_symbols+=
 get_location_list = get_location_list,
 
-@o+=
-local
-
 @increase_all_line_number_by_one_for_assembly_header+=
 for _, line in ipairs(tangled) do
   local prefix, l = unpack(line)
