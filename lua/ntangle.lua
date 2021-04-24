@@ -79,7 +79,24 @@ local function show_assemble()
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -107,6 +124,7 @@ local function show_assemble()
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -128,6 +146,7 @@ local function show_assemble()
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
@@ -471,7 +490,24 @@ local function get_location_list()
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -500,6 +536,7 @@ local function get_location_list()
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -521,6 +558,7 @@ local function get_location_list()
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
@@ -608,7 +646,24 @@ local function tangle(filename)
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -642,6 +697,7 @@ local function tangle(filename)
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -663,6 +719,7 @@ local function tangle(filename)
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
@@ -894,7 +951,24 @@ local function getRootFilename()
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -928,6 +1002,7 @@ local function getRootFilename()
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -949,6 +1024,7 @@ local function getRootFilename()
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
@@ -1229,7 +1305,24 @@ local function show_helper()
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -1258,6 +1351,7 @@ local function show_helper()
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -1279,6 +1373,7 @@ local function show_helper()
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
@@ -1491,7 +1586,24 @@ local function collectSection()
 		local parendir = vim.fn.fnamemodify(fn, ":p:h")
 		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-		local part_tail = vim.fn.fnamemodify(fn, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
 		if vim.fn.isdirectory(path) == 0 then
@@ -1520,6 +1632,7 @@ local function collectSection()
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
 					offset[origin_path] = #assembled
 					
 					local lnum = 1
@@ -1541,6 +1654,7 @@ local function collectSection()
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do

@@ -283,7 +283,7 @@ fn = vim.fn.fnamemodify(fn, ":p")
 local parendir = vim.fn.fnamemodify(fn, ":p:h")
 local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
 local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
-local part_tail = vim.fn.fnamemodify(fn, ":t")
+@build_part_tail
 local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 local path = vim.fn.fnamemodify(link_name, ":h")
 @create_directory_if_non_existent
@@ -400,3 +400,23 @@ local valid_parts = {}
 
 @add_to_parts_for_generated+=
 table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+
+@build_part_tail+=
+local part_tails = {}
+local copy_fn = fn
+local copy_curassembly = curassembly
+while true do
+  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+  table.insert(part_tails, 1, part_tail)
+  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+
+  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+  if copy_curassembly == "." then
+    break
+  end
+  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+  end
+end
+local part_tail = table.concat(part_tails, ".")
+print("part_tail " .. vim.inspect(part_tail))
