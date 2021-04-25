@@ -419,4 +419,3 @@ while true do
   end
 end
 local part_tail = table.concat(part_tails, ".")
-print("part_tail " .. vim.inspect(part_tail))

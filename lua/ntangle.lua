@@ -1,4 +1,4 @@
--- Generated from assemble.lua.t, border_window.lua.t, contextmenu.lua.t, debug.lua.t, find_root.lua.t, mapping.lua.t, ntangle.lua.t, parse.lua.t, search_cache.lua.t, show_helper.lua.t, transpose.lua.t, treesitter.lua.t using ntangle.nvim
+-- Generated from assemble.lua.t, border_window.lua.t, contextmenu.lua.t, ntangle.lua.t, debug.lua.t, find_root.lua.t, mapping.lua.t, ntangle.lua.t, parse.lua.t, search_cache.lua.t, show_helper.lua.t, transpose.lua.t, treesitter.lua.t using ntangle.nvim
 require("linkedlist")
 
 local assemble_nav = {}
@@ -39,6 +39,8 @@ local fill_border
 
 local contextmenu_open
 
+local outputSections
+
 local debug_array
 
 local get_section
@@ -63,9 +65,27 @@ local function show_assemble()
 
 	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
 		
 		curassembly = name
 		
@@ -96,6 +116,23 @@ local function show_assemble()
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -104,8 +141,72 @@ local function show_assemble()
 			vim.fn.mkdir(path, "p") 
 		end
 		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		local valid_parts = {}
 		
 		local offset = {}
@@ -121,9 +222,17 @@ local function show_assemble()
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -135,6 +244,8 @@ local function show_assemble()
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -142,16 +253,180 @@ local function show_assemble()
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -386,6 +661,1955 @@ local function select_contextmenu()
 	end
 end
 
+local function tangle(filename)
+	local curassembly
+	local lines = {}
+	if filename then
+		for line in io.lines(filename) do
+			table.insert(lines, line)
+		end
+		
+		for line in io.lines(filename) do
+			table.insert(lines, line)
+		end
+		
+	else
+		lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		
+		lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		
+	end
+
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		local lines = assembled 
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		parse(lines)
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		parse(lines)
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+	end
+end
+
+function outputSections(lines, file, name, prefix)
+	if not sections[name] then
+		return
+	end
+	
+	if not sections[name] then
+		return
+	end
+	
+	for section in linkedlist.iter(sections[name].list) do
+		for line in linkedlist.iter(section.lines) do
+			if line.linetype == LineType.TEXT then
+				lines[#lines+1] = prefix .. line.str
+			end
+			
+			if line.linetype == LineType.TEXT then
+				lines[#lines+1] = prefix .. line.str
+			end
+			
+			if line.linetype == LineType.REFERENCE then
+				outputSections(lines, file, line.str, prefix .. line.prefix)
+			end
+			
+			if line.linetype == LineType.REFERENCE then
+				outputSections(lines, file, line.str, prefix .. line.prefix)
+			end
+			
+		end
+	end
+end
+
+local function tangleAll()
+	local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
+	
+	local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
+	
+	for file in vim.gsplit(filelist, "\n") do
+		tangle(file)
+	end
+end
+
+local function getRootFilename()
+	local filename = vim.api.nvim_call_function("expand", { "%:p"})
+	local parendir = vim.api.nvim_call_function("fnamemodify", { filename, ":p:h" })
+  local roots = {}
+
+  local curassembly
+
+  lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  
+  lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	if curassembly then
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		local lines = assembled 
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
+
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		parse(lines)
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		parse(lines)
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+	end
+
+  if #roots == 0 then
+    print("No root found!")
+  end
+
+  if #roots > 1 then
+    print("multiple roots !")
+  end
+
+	return roots[1]
+end
+
 function debug_array(l)
 	if #l == 0 then
 		print("{}")
@@ -469,12 +2693,30 @@ local function get_location_list()
 	local lines = {}
 	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
 
   local _, row, _, _ = unpack(vim.fn.getpos("."))
   
   local line = lines[1] or ""
   if string.match(lines[1], "^##%S*%s*$") then
   	local name = string.match(line, "^##(%S*)%s*$")
+  	
+  	local name = string.match(line, "^##(%S*)%s*$")
+  	
+  	curassembly = name
+  	
+  	curassembly = name
+  	
+  end
+  
+  local line = lines[1] or ""
+  if string.match(lines[1], "^##%S*%s*$") then
+  	local name = string.match(line, "^##(%S*)%s*$")
+  	
+  	local name = string.match(line, "^##(%S*)%s*$")
+  	
+  	curassembly = name
   	
   	curassembly = name
   	
@@ -507,6 +2749,23 @@ local function get_location_list()
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -515,9 +2774,73 @@ local function get_location_list()
 			vim.fn.mkdir(path, "p") 
 		end
 		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		local valid_parts = {}
 		
 		local offset = {}
@@ -533,9 +2856,17 @@ local function get_location_list()
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -547,6 +2878,8 @@ local function get_location_list()
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -554,16 +2887,180 @@ local function get_location_list()
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -580,11 +3077,16 @@ local function get_location_list()
 		
 		parse(lines)
 		
+		parse(lines)
+		
 
 		local containing = get_section(rootlines, row)
 		containing = resolve_root_section(containing)
 		
 
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
 		local ext = vim.fn.fnamemodify(fn, ":e:e")
 		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 		
@@ -602,6 +3104,8 @@ local function get_location_list()
   else
 		sections = {}
 		curSection = nil
+		
+		parse(lines)
 		
 		parse(lines)
 		
@@ -627,7 +3131,13 @@ local function tangle(filename)
 			table.insert(lines, line)
 		end
 		
+		for line in io.lines(filename) do
+			table.insert(lines, line)
+		end
+		
 	else
+		lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+		
 		lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 		
 	end
@@ -635,6 +3145,22 @@ local function tangle(filename)
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
 		
 		curassembly = name
 		
@@ -663,6 +3189,23 @@ local function tangle(filename)
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -670,6 +3213,186 @@ local function tangle(filename)
 			-- "p" means create also subdirectories
 			vim.fn.mkdir(path, "p") 
 		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
 		
 		
 		local link_file = io.open(link_name, "w")
@@ -685,6 +3408,12 @@ local function tangle(filename)
 		
 		local origin = {}
 		
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		path = vim.fn.fnamemodify(path, ":p")
 		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
@@ -694,9 +3423,17 @@ local function tangle(filename)
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -708,6 +3445,8 @@ local function tangle(filename)
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -715,16 +3454,180 @@ local function tangle(filename)
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -737,9 +3640,14 @@ local function tangle(filename)
 		local ext = vim.fn.fnamemodify(fn, ":e:e")
 		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 		
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
 
 		sections = {}
 		curSection = nil
+		
+		parse(lines)
 		
 		parse(lines)
 		
@@ -750,6 +3658,18 @@ local function tangle(filename)
 				if name == "*" then
 					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
 				
 				else
 					if string.find(name, "/") then
@@ -766,12 +3686,80 @@ local function tangle(filename)
 					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
 				end
 				
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
 				outputSections(lines, file, name, "")
 				local modified = false
 				do
 					local f = io.open(fn, "r")
 					if f then 
 						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
 						local lnum = 1
 						for line in f:lines() do
 							if lnum > #lines then
@@ -807,20 +3795,29 @@ local function tangle(filename)
 					end
 				end
 				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
 			end
 		end
 		
-	else
-		sections = {}
-		curSection = nil
-		
-		parse(lines)
-		
-		filename = filename or vim.api.nvim_buf_get_name(0)
 		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
 		for name, section in pairs(sections) do
 			if section.root then
 				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
 				if name == "*" then
 					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 					fn = parendir .. "/tangle/" .. tail
@@ -833,7 +3830,203 @@ local function tangle(filename)
 					end
 				end
 				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
 				lines = {}
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					table.insert(lines, "-- Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					table.insert(lines, "\" Generated from " .. table.concat(valid_parts, ", ") .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+	else
+		sections = {}
+		curSection = nil
+		
+		parse(lines)
+		
+		parse(lines)
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
 				if string.match(fn, "lua$") then
 					local relname
 					if filename then
@@ -877,9 +4070,271 @@ local function tangle(filename)
 							modified = true
 						end
 						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
 						f:close()
 					else
 						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
+					end
+				end
+				
+			end
+		end
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				if string.match(fn, "lua$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "-- Generated from " .. relname .. " using ntangle.nvim")
+				elseif string.match(fn, "vim$") then
+					local relname
+					if filename then
+						relname = filename
+					else
+						relname = vim.api.nvim_buf_get_name(0)
+					end
+					relname = vim.api.nvim_call_function("fnamemodify", { relname, ":t" })
+					table.insert(lines, "\" Generated from " .. relname .. " using ntangle.nvim")
+				end
+				
+				outputSections(lines, file, name, "")
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				local modified = false
+				do
+					local f = io.open(fn, "r")
+					if f then 
+						modified = false
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						local lnum = 1
+						for line in f:lines() do
+							if lnum > #lines then
+								modified = true
+								break
+							end
+							if line ~= lines[lnum] then
+								modified = true
+								break
+							end
+							lnum = lnum + 1
+						end
+						
+						if lnum-1 ~= #lines then
+							modified = true
+						end
+						
+						f:close()
+					else
+						modified = true
+					end
+				end
+				
+				if modified then
+					local f, err = io.open(fn, "w")
+					if f then
+						for _,line in ipairs(lines) do
+							f:write(line .. "\n")
+						end
+						f:close()
+					else
+						print(err)
 					end
 				end
 				
@@ -906,10 +4361,22 @@ function outputSections(lines, file, name, prefix)
 		return
 	end
 	
+	if not sections[name] then
+		return
+	end
+	
 	for section in linkedlist.iter(sections[name].list) do
 		for line in linkedlist.iter(section.lines) do
 			if line.linetype == LineType.TEXT then
 				lines[#lines+1] = prefix .. line.str
+			end
+			
+			if line.linetype == LineType.TEXT then
+				lines[#lines+1] = prefix .. line.str
+			end
+			
+			if line.linetype == LineType.REFERENCE then
+				outputSections(lines, file, line.str, prefix .. line.prefix)
 			end
 			
 			if line.linetype == LineType.REFERENCE then
@@ -921,6 +4388,8 @@ function outputSections(lines, file, name, prefix)
 end
 
 local function tangleAll()
+	local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
+	
 	local filelist = vim.api.nvim_call_function("glob", { "**/*.t" })
 	
 	for file in vim.gsplit(filelist, "\n") do
@@ -937,9 +4406,27 @@ local function getRootFilename()
 
   lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
   
+  lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
 		
 		curassembly = name
 		
@@ -968,6 +4455,23 @@ local function getRootFilename()
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -975,6 +4479,186 @@ local function getRootFilename()
 			-- "p" means create also subdirectories
 			vim.fn.mkdir(path, "p") 
 		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
+		
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local link_file = io.open(link_name, "w")
+		link_file:write(fn)
+		link_file:close()
 		
 		
 		local link_file = io.open(link_name, "w")
@@ -990,6 +4674,12 @@ local function getRootFilename()
 		
 		local origin = {}
 		
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		path = vim.fn.fnamemodify(path, ":p")
 		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
 		link_name = vim.fn.fnamemodify(link_name, ":p")
@@ -999,9 +4689,17 @@ local function getRootFilename()
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -1013,6 +4711,8 @@ local function getRootFilename()
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -1020,16 +4720,180 @@ local function getRootFilename()
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -1042,9 +4906,14 @@ local function getRootFilename()
 		local ext = vim.fn.fnamemodify(fn, ":e:e")
 		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 		
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
 
 		sections = {}
 		curSection = nil
+		
+		parse(lines)
 		
 		parse(lines)
 		
@@ -1055,6 +4924,51 @@ local function getRootFilename()
 				if name == "*" then
 					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
 				
 				else
 					if string.find(name, "/") then
@@ -1075,6 +4989,8 @@ local function getRootFilename()
 		
 		parse(lines)
 		
+		parse(lines)
+		
 		filename = filename or vim.api.nvim_buf_get_name(0)
 		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
 		for name, section in pairs(sections) do
@@ -1083,6 +4999,52 @@ local function getRootFilename()
 				if name == "*" then
 					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
+				
+				lines = {}
+		    table.insert(roots, fn)
+			end
+		end
+		
+		filename = filename or vim.api.nvim_buf_get_name(0)
+		local parendir = vim.fn.fnamemodify(filename, ":p:h" )
+		for name, section in pairs(sections) do
+			if section.root then
+				local fn
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				if name == "*" then
+					local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+					fn = parendir .. "/tangle/" .. tail
+				
+				else
+					if string.find(name, "/") then
+						fn = parendir .. "/" .. name
+					else
+						fn = parendir .. "/tangle/" .. name
+					end
+				end
 				
 				else
 					if string.find(name, "/") then
@@ -1288,10 +5250,28 @@ local function show_helper()
 	local lines = {}
 	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
 
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
 		
 		curassembly = name
 		
@@ -1322,6 +5302,23 @@ local function show_helper()
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -1330,9 +5327,73 @@ local function show_helper()
 			vim.fn.mkdir(path, "p") 
 		end
 		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		local valid_parts = {}
 		
 		local offset = {}
@@ -1348,9 +5409,17 @@ local function show_helper()
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -1362,6 +5431,8 @@ local function show_helper()
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -1369,16 +5440,180 @@ local function show_helper()
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -1389,9 +5624,27 @@ local function show_helper()
 		
 		offset[fn] = #assembled
 		
+		offset[fn] = #assembled
+		
 		for lnum, line in ipairs(lines) do
 			if lnum > 1 then
 				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
+				table.insert(origin, fn)
+				
+			end
+		end
+		
+		offset[fn] = #assembled
+		
+		offset[fn] = #assembled
+		
+		for lnum, line in ipairs(lines) do
+			if lnum > 1 then
+				table.insert(assembled, line)
+				table.insert(origin, fn)
+				
 				table.insert(origin, fn)
 				
 			end
@@ -1404,10 +5657,14 @@ local function show_helper()
 		
 		parse(lines)
 		
+		parse(lines)
+		
 	end
 
 	sections = {}
 	curSection = nil
+	
+	parse(lines)
 	
 	parse(lines)
 	
@@ -1564,12 +5821,30 @@ local function collectSection()
 	local lines = {}
 	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 	
+	lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	
 
 	local _, row, _, _ = unpack(vim.fn.getpos("."))
 	
 	local line = lines[1] or ""
 	if string.match(lines[1], "^##%S*%s*$") then
 		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
+		
+		curassembly = name
+		
+	end
+	
+	local line = lines[1] or ""
+	if string.match(lines[1], "^##%S*%s*$") then
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		local name = string.match(line, "^##(%S*)%s*$")
+		
+		curassembly = name
 		
 		curassembly = name
 		
@@ -1603,6 +5878,23 @@ local function collectSection()
 		  end
 		end
 		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
 		print("part_tail " .. vim.inspect(part_tail))
 		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
 		local path = vim.fn.fnamemodify(link_name, ":h")
@@ -1611,9 +5903,73 @@ local function collectSection()
 			vim.fn.mkdir(path, "p") 
 		end
 		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		
+		local fn = filename or vim.api.nvim_buf_get_name(0)
+		fn = vim.fn.fnamemodify(fn, ":p")
+		local parendir = vim.fn.fnamemodify(fn, ":p:h")
+		local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+		local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		local part_tails = {}
+		local copy_fn = fn
+		local copy_curassembly = curassembly
+		while true do
+		  local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+		  table.insert(part_tails, 1, part_tail)
+		  copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+		
+		  copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+		  if copy_curassembly == "." then
+		    break
+		  end
+		  if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+		    error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+		  end
+		end
+		local part_tail = table.concat(part_tails, ".")
+		print("part_tail " .. vim.inspect(part_tail))
+		local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+		local path = vim.fn.fnamemodify(link_name, ":h")
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
+		if vim.fn.isdirectory(path) == 0 then
+			-- "p" means create also subdirectories
+			vim.fn.mkdir(path, "p") 
+		end
+		
 		
 		
 		local assembled = {}
+		local valid_parts = {}
+		
+		local offset = {}
+		
+		local origin = {}
+		
 		local valid_parts = {}
 		
 		local offset = {}
@@ -1629,9 +5985,17 @@ local function collectSection()
 				local origin_path = f:read("*line")
 				f:close()
 				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
 				local f = io.open(origin_path, "r")
 				if f then
 					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
 					
 					offset[origin_path] = #assembled
 					
@@ -1643,6 +6007,8 @@ local function collectSection()
 							table.insert(assembled, line)
 							table.insert(origin, origin_path)
 							
+							table.insert(origin, origin_path)
+							
 						end
 						lnum = lnum + 1
 					end
@@ -1650,16 +6016,180 @@ local function collectSection()
 				else
 					os.remove(part)
 					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
 				end
 				
 			else
 				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
 				
 				offset[fn] = #assembled
 				
 				for lnum, line in ipairs(lines) do
 					if lnum > 1 then
 						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+			end
+		end
+		
+		path = vim.fn.fnamemodify(path, ":p")
+		local parts = vim.split(vim.fn.glob(path .. assembly_tail .. ".*.t"), "\n")
+		link_name = vim.fn.fnamemodify(link_name, ":p")
+		for _, part in ipairs(parts) do
+			if link_name ~= part then
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(part, "r")
+				local origin_path = f:read("*line")
+				f:close()
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+				local f = io.open(origin_path, "r")
+				if f then
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+					
+					offset[origin_path] = #assembled
+					
+					offset[origin_path] = #assembled
+					
+					local lnum = 1
+					while true do
+						local line = f:read("*line")
+						if not line then break end
+						if lnum > 1 then
+							table.insert(assembled, line)
+							table.insert(origin, origin_path)
+							
+							table.insert(origin, origin_path)
+							
+						end
+						lnum = lnum + 1
+					end
+					f:close()
+				else
+					os.remove(part)
+					
+					os.remove(part)
+					
+				end
+				
+			else
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				table.insert(valid_parts, vim.fn.fnamemodify(part, ":t:e:e:e"))
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
+						table.insert(origin, fn)
+						
+					end
+				end
+				
+				offset[fn] = #assembled
+				
+				offset[fn] = #assembled
+				
+				for lnum, line in ipairs(lines) do
+					if lnum > 1 then
+						table.insert(assembled, line)
+						table.insert(origin, fn)
+						
 						table.insert(origin, fn)
 						
 					end
@@ -1676,11 +6206,16 @@ local function collectSection()
 		
 		parse(lines)
 		
+		parse(lines)
+		
 
 		local containing = get_section(rootlines, row)
 		containing = resolve_root_section(containing)
 		
 
+		local ext = vim.fn.fnamemodify(fn, ":e:e")
+		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
+		
 		local ext = vim.fn.fnamemodify(fn, ":e:e")
 		local filename = parendir .. "/" .. assembly_parendir .. "/" .. assembly_tail .. "." .. ext
 		
@@ -1708,6 +6243,8 @@ local function collectSection()
 	else
 		sections = {}
 		curSection = nil
+		
+		parse(lines)
 		
 		parse(lines)
 		
@@ -1826,12 +6363,30 @@ function outputSectionsFull(filename, lines, name, prefix)
 			local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
 			fn = parendir .. "/tangle/" .. tail
 		
+		if name == "*" then
+			local tail = vim.api.nvim_call_function("fnamemodify", { filename, ":t:r" })
+			fn = parendir .. "/tangle/" .. tail
+		
 		else
 			if string.find(name, "/") then
 				fn = parendir .. "/" .. name
 			else
 				fn = parendir .. "/tangle/" .. name
 			end
+		end
+		
+		else
+			if string.find(name, "/") then
+				fn = parendir .. "/" .. name
+			else
+				fn = parendir .. "/tangle/" .. name
+			end
+		end
+		
+		if string.match(filename, "lua.t$") then
+			table.insert(lines, {"", { str = "-- Generated from {relname} using ntangle.nvim" }})
+		elseif string.match(filename, "vim.t$") then
+			table.insert(lines, {"", { str = "\" Generated from {relname} using ntangle.nvim" }})
 		end
 		
 		if string.match(filename, "lua.t$") then
@@ -1904,6 +6459,12 @@ show_assemble = show_assemble,
 assembleNavigate = assembleNavigate,
 
 select_contextmenu = select_contextmenu,
+
+tangle = tangle,
+
+tangleAll = tangleAll,
+
+getRootFilename = getRootFilename,
 
 get_location_list = get_location_list,
 
