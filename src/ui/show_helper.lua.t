@@ -1,33 +1,17 @@
 ##../ntangle_main
 @functions+=
 local function show_helper()
-	local curassembly
-	local lines = {}
-	@read_lines_from_buffer
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 
-	@read_assembly_name_if_any
+  local tangled = tangle_lines(buf, lines)
 
-	local filename
-	if curassembly then
-		@construct_path_for_link_file
-		
-		local assembled = {}
-		@glob_all_links_and_assemble
-		@append_current_buffer_to_the_assembled
-
-		lines = assembled
-		@clear_sections
-		@read_file_line_by_line_from_variable
-	end
-
-	@clear_sections
-	@read_file_line_by_line_from_variable
-
-	@from_every_root_node_mark_visited_sections
 	local qflist = {}
-	@output_undefined_section_references
+	@search_undefined_sections
 	@search_ophan_sections
-	@output_orphan_sections
+
+  @output_undefined_section_references
+  @output_orphan_sections
 
 	@if_no_text_to_display_add_some_info_text
 	@compute_max_width_for_helper_window
@@ -41,92 +25,33 @@ end
 @export_symbols+=
 show_helper = show_helper,
 
-@from_every_root_node_mark_visited_sections+=
-local visited, notdefined = {}, {}
-for name, section in pairs(sections) do
-	if section.root then
-		visitSections(visited, notdefined, name, 0)
-	end
-end
-
-@declare_functions+=
-local visitSections
-
-@functions+=
-function visitSections(visited, notdefined, name, lnum) 
-	@if_already_visited_skip
-	@if_not_defined_add_and_skip
-	visited[name] = true
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			@if_reference_recursively_visit
-		end
-	end
-end
-
-@if_already_visited_skip+=
-if visited[name] then
-	return
-end
-
-@if_not_defined_add_and_skip+=
-if not sections[name] then
-	notdefined[name] = lnum
-	return
-end
-
-@if_reference_recursively_visit+=
-if line.linetype == LineType.REFERENCE then
-	visitSections(visited, notdefined, line.str, line.lnum)
-end
-
-@output_undefined_section_references+=
-for name, lnum in pairs(notdefined) do
-	table.insert(qflist, { name, " is empty" } )
-end
-
-@declare_functions+=
-local searchOrphans
-
-@functions+=
-function searchOrphans(name, visited, orphans, lnum) 
-	@if_not_section_skip
-	@if_not_visited_set_as_orphan_visited_child_and_quit
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			@if_reference_go_further_for_orphans
-		end
-	end
-end
-
-@if_not_visited_set_as_orphan_visited_child_and_quit+=
-if not visited[name] and linkedlist.get_size(sections[name].list) > 0 then
-	orphans[name] = lnum
-	local dummy = {}
-	visitSections(visited, dummy, name, 0)
-	return
-end
-
-@if_not_section_skip+=
-if not sections[name] then
-	return
-end
-
-@if_reference_go_further_for_orphans+=
-if line.linetype == LineType.REFERENCE then
-	searchOrphans(line.str, visited, orphans, line.lnum)
+@search_undefined_sections+=
+local undefined_section = {}
+for line in linkedlist.iter(tangled.untangled_ll) do
+  if line.linetype == LineType.REFERENCE then
+    if not line.tangled or #line.tangled == 0 then
+      undefined_section[line.str] = true
+    end
+  end
 end
 
 @search_ophan_sections+=
-local orphans = {}
-for name, section in pairs(sections) do
-	if not section.root then
-		searchOrphans(name, visited, orphans, 0)
-	end
+local orphan_section = {}
+for line in linkedlist.iter(tangled.untangled_ll) do
+  if line.linetype == LineType.SECTION then
+    if not line.tangled or #line.tangled == 0 then
+      orphan_section[line.str] = true
+    end
+  end
+end
+
+@output_undefined_section_references+=
+for name, _ in pairs(undefined_section) do
+	table.insert(qflist, { name, " is empty" } )
 end
 
 @output_orphan_sections+=
-for name, lnum in pairs(orphans) do
+for name, _ in pairs(orphan_section) do
 	table.insert(qflist, { name , " orphan section" })
 end
 

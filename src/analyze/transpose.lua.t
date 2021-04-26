@@ -1,47 +1,18 @@
 ##../ntangle_main
 @functions+=
-local function collectSection()
-	local curassembly
-	local lines = {}
-	@read_lines_from_buffer
+local function transpose()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+  local tangled = tangle_lines(buf, lines)
+	local assembled = {}
 
 	@save_cursor_position
-	@read_assembly_name_if_any
-	
-	local tangled = {}
-	local filename
-	local jumplines = {}
-
-	if curassembly then
-		@construct_path_for_link_file
-		
-		local assembled = {}
-		@glob_all_links_and_assemble
-
-		local rootlines = lines
-		local lines = assembled
-		@clear_sections
-		@read_file_line_by_line_from_variable
-
-		@get_containing_root_section
-
-		@set_filename_of_assembled
-		@tangle_for_containing_section
-		@search_in_tangled_the_line_where_the_cursor_was_assembly
-		@save_lines_for_navigation_assembly
-	else
-		@clear_sections
-		@read_file_line_by_line_from_variable
-		@set_filename_of_current_buf
-
-		local rootlines = lines
-		@get_containing_root_section
-		@tangle_for_containing_section
-		@search_in_tangled_the_line_where_the_cursor_was
-		@save_lines_for_navigation
-	end
-
 	@save_current_filetype
+
+  local jumplines = {}
+  @augment_tangled_with_lnum
+  @fill_jumplines
 
 	local selected = function(row) 
 		local jumpline = jumplines[row]
@@ -56,6 +27,7 @@ local function collectSection()
 		@put_lines_in_buffer
 		@keymap_transpose_buffer
 
+    @save_lines_for_navigation
 		@jump_to_lines_in_transpose_buffer
 	end
 
@@ -63,7 +35,46 @@ local function collectSection()
 end
 
 @export_symbols+=
-collectSection = collectSection,
+transpose = transpose,
+
+@augment_tangled_with_lnum+=
+for name, root in pairs(tangled.roots) do
+  local lnum = 1
+  local lines = {}
+  local fn = get_origin(buf, tangled.asm, name)
+  @output_ntangle_header
+  lnum = lnum + #lines
+
+  local it = root.tangled[1]
+  while it and it ~= root.tangled[2] do
+    if it.data.linetype ~= LineType.SENTINEL then
+      it.data.lnum = lnum
+      it.data.root = name
+      lnum = lnum + 1
+    end
+    it = it.next
+  end
+end
+
+@fill_jumplines+=
+for part in linkedlist.iter(tangled.parts_ll) do
+  if part.origin == buf then
+    local part_lnum = 1
+    local it = part.start_part
+    while it and it ~= part.end_part do
+      if it.data.linetype ~= LineType.SENTINEL then
+        if part_lnum == row then
+          jumplines = it.data.tangled
+          break
+        end
+        part_lnum = part_lnum + 1
+      end
+      it = it.next
+    end
+
+    if jumplines then break end
+  end
+end
 
 @get_current_window_dimensions+=
 local perc = 0.8
@@ -119,92 +130,53 @@ vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"n
 @save_cursor_position+=
 local _, row, _, _ = unpack(vim.fn.getpos("."))
 
-@get_containing_root_section+=
-local containing = get_section(rootlines, row)
-containing = resolve_root_section(containing)
-
-@tangle_for_containing_section+=
-outputSectionsFull(filename, tangled, containing)
-
-@declare_functions+=
-local outputSectionsFull
-
-@functions+=
-function outputSectionsFull(filename, lines, name, prefix)
-	prefix = prefix or ""
-	@check_if_section_exists_otherwise_return_with_cur
-	@if_section_is_root_generate_fake_header
-	for section in linkedlist.iter(sections[name].list) do
-		for line in linkedlist.iter(section.lines) do
-			@if_line_is_text_store_line
-			@if_reference_recursively_call_output_sections_full
-		end
-	end
-	return cur, nil
-end
-
-@check_if_section_exists_otherwise_return_with_cur+=
-if not sections[name] then
-	return
-end
-
-@if_section_is_root_generate_fake_header+=
-if sections[name].root then
-	local parendir = vim.fn.fnamemodify(filename, ":p:h" )
-	@if_star_replace_with_current_filename
-	@otherwise_put_node_name
-	@output_generated_header_fake
-end
-
-@if_line_is_text_store_line+=
-if line.linetype == LineType.TEXT then
-	table.insert(lines, { prefix, line })
-end
-
-@if_reference_recursively_call_output_sections_full+=
-if line.linetype == LineType.REFERENCE then
-	outputSectionsFull(filename, lines, line.str, line.prefix .. prefix)
-end
-
-@search_in_tangled_the_line_where_the_cursor_was+=
-for lnum, line in ipairs(tangled) do
-	local _, l = unpack(line)
-	if l.lnum == row then
-		table.insert(jumplines, lnum)
-	end
-end
-
-assert(#jumplines > 0, "Could not find line to jump")
-
 @put_lines_in_buffer+=
 local transpose_lines = {}
-for _, l in ipairs(tangled) do
-	local prefix, line = unpack(l)
-	table.insert(transpose_lines, prefix .. line.str)
+
+local lines = {}
+local fn = get_origin(buf, tangled.asm, jumpline.data.root)
+@output_ntangle_header
+
+for _, line in ipairs(lines) do
+  table.insert(transpose_lines, line)
+end
+
+local root = tangled.roots[jumpline.data.root]
+local it = root.tangled[1]
+while it and it ~= root.tangled[2] do
+  if it.data.linetype ~= LineType.SENTINEL then
+    table.insert(transpose_lines, it.data.str)
+  end
+  it = it.next
 end
 
 vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
 
 @jump_to_lines_in_transpose_buffer+=
-vim.fn.setpos(".", {0, jumpline, 0, 0})
+vim.fn.setpos(".", {0, jumpline.data.lnum, 0, 0})
 
 @parse_variables+=
 local nagivationLines = {}
 
 @save_lines_for_navigation+=
-navigationLines = {}
-local curorigin = vim.api.nvim_buf_get_name(0)
-for _,line in ipairs(tangled) do 
-	local _, l = unpack(line)
-	local nav = { origin = curorigin, lnum = l.lnum }
-	table.insert(navigationLines, nav)
-end
+navigationLines = {
+  tangled = tangled,
+  buf = buf,
+  root = jumpline.data.root,
+}
 
 @functions+=
 local function navigateTo()
 	@save_cursor_position
 	@close_transpose_window
-	@jump_to_linenumber
+  local tangled = navigationLines.tangled
+  local root = navigationLines.root
+  @find_tangle_at_row
+  if tangled_it then
+    local untangled = tangled_it.data.untangled
+    @find_untangle_origin_and_lnum
+    @jump_to_linenumber
+  end
 end
 
 @export_symbols+=
@@ -213,50 +185,57 @@ navigateTo = navigateTo,
 @close_transpose_window+=
 vim.api.nvim_win_close(transpose_win, true)
 
+@find_tangle_at_row+=
+local start_root = tangled.roots[root].tangled[1]
+local end_root = tangled.roots[root].tangled[2]
+local tangled_it = start_root
+while tangled_it and tangled_it ~= end_root do
+  if tangled_it.data.linetype ~= LineType.SENTINEL then
+    if tangled_it.data.lnum == row then
+      break
+    end
+  end
+  tangled_it = tangled_it.next
+end
+
+@find_untangle_origin_and_lnum+=
+local origin, lnum
+for part in linkedlist.iter(tangled.parts_ll) do
+  local part_lnum = 1
+  local it = part.start_part
+  while it and it ~= part.end_part do
+    if it.data.linetype ~= LineType.SENTINEL then
+      if it == untangled then
+        origin = part.origin
+        lnum = part_lnum
+        break
+      end
+      part_lnum = part_lnum + 1
+    end
+    it = it.next
+  end
+
+  if origin then break end
+end
+
 @jump_to_linenumber+=
-local n = navigationLines[row]
-if vim.api.nvim_buf_get_name(0) ~= n.origin then
-	vim.api.nvim_command("e " .. n.origin)
-end
-vim.fn.setpos(".", {0, n.lnum, 0, 0})
-
-@search_in_tangled_the_line_where_the_cursor_was_assembly+=
-for lnum, line in ipairs(tangled) do
-	local _, l = unpack(line)
-	local relpos = (l.lnum or -1) - offset[fn]
-	if relpos == row-1 then
-		table.insert(jumplines, lnum)
-	end
-end
-
-assert(#jumplines > 0, "Could not jump to line")
-
-@save_lines_for_navigation_assembly+=
-navigationLines = {}
-for lnum,line in ipairs(tangled) do 
-	local _, l = unpack(line)
-	local origin = origin[l.lnum]
-	local relpos = (l.lnum or -1) - (offset[origin] or 0)
-	local nav = { origin = origin, lnum = relpos+1 }
-	table.insert(navigationLines, nav)
-end
+vim.api.nvim_command("e " .. origin)
+vim.api.nvim_win_set_cursor(0, {lnum, 0})
 
 @save_current_filetype+=
 local ft = vim.api.nvim_buf_get_option(0, "ft")
 
 @setup_transpose_buffer+=
-vim.api.nvim_buf_set_option(0, "ft", ext_to_lang[ft] or ft)
-
-@set_filename_of_current_buf+=
-filename = vim.api.nvim_buf_get_name(0)
+vim.api.nvim_buf_set_option(0, "ft", ft)
 
 @open_context_menu_if_multiple_or_jump_directly+=
+assert(jumplines and #jumplines > 0, "Could not find line to jump")
 if #jumplines == 1 then
 	selected(1)
 else
 	local options = {}
-	for _, lnum in ipairs(jumplines) do
-		table.insert(options, "L" .. lnum)
+	for _, jumpline in ipairs(jumplines) do
+		table.insert(options, "L" .. jumpline.data.lnum .. " " .. jumpline.data.root)
 	end
 	contextmenu_open(options, selected)
 end

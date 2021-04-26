@@ -1,14 +1,6 @@
-##../buildcache
-@../lua/buildcache.lua=
-@requires
-@declare_functions
-@functions
-return {
-@export_symbols
-}
-
+##../ntangle_main
 @functions+=
-local function build(filename)
+local function build_cache(filename)
 	@get_filelist
 	@cache_variables
 	@foreach_file_get_all_sections
@@ -16,7 +8,7 @@ local function build(filename)
 end
 
 @export_symbols+=
-build = build,
+build_cache = build_cache,
 
 @get_filelist+=
 local tangle_code_dir = "~/fakeroot/code"

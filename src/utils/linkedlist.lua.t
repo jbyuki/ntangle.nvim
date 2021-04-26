@@ -1,7 +1,6 @@
-##../linkedlist
-@../lua/linkedlist.lua=
+##../ntangle_main
+@parse_variables+=
 linkedlist = {}
-@functions
 
 @functions+=
 function linkedlist.push_back(list, el)
@@ -45,13 +44,12 @@ list.head = node
 @return_new_element+=
 return node
 
-@o+=
-local a
-
 @functions+=
 function linkedlist.insert_after(list, it, el)
 	@create_new_element
-	if it.next == nil then
+  if not it then
+		@insert_el_in_head_after
+  elseif it.next == nil then
 		@insert_el_in_tail
 	else
 		@insert_el_in_between
@@ -59,10 +57,20 @@ function linkedlist.insert_after(list, it, el)
 	@return_new_element
 end
 
+@insert_el_in_head_after+=
+if not list then
+  print(debug.traceback())
+end
+node.next = list.head
+if list.head then
+  list.head.prev = node
+end
+list.head = node
+
 @insert_el_in_tail+=
 it.next = node
 node.prev = it
-list.tail = it
+list.tail = node
 
 @insert_el_in_between+=
 node.next = it.next

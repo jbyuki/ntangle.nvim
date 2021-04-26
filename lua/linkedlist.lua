@@ -117,4 +117,3 @@ function linkedlist.iter_from_back(pos)
 		end
 	end
 end
-
