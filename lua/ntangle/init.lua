@@ -8,8 +8,6 @@ local borderwin
 local nagivationLines = {}
 
 local LineType = {
-	SENTINEL = 4,
-	
 	ASSEMBLY = 5,
 	
 	REFERENCE = 1,
@@ -17,6 +15,8 @@ local LineType = {
 	TEXT = 2,
 	
 	SECTION = 3,
+	
+	SENTINEL = 4,
 	
 	TANGLED = 6,
 	
@@ -38,11 +38,47 @@ local tangle_write
 
 local tangle_all
 
+local debug_array
+
 local fill_border
 
 local contextmenu_open
 
 local close_preview_autocmd
+
+local function build_cache(filename)
+	local tangle_code_dir = "~/fakeroot/code"
+	local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
+	
+	local globalcache = {}
+	
+	for file in vim.gsplit(filelist, "\n") do
+		local filerefs = {}
+		
+		for line in io.lines(file) do
+			if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+				local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+				
+				filerefs[name] = true
+				
+			end
+			
+		end
+		
+		globalcache[file] = filerefs
+		
+	end
+	
+	local cache = io.open(filename, "w")
+	for file, filerefs in pairs(globalcache) do
+		for name,_ in pairs(filerefs) do
+			local name_words = string.gsub(name, "_+", " ")
+			cache:write(name_words .. " " .. file .. "\n")
+		end
+	end
+	cache:close()
+	print("Cache written to " .. filename .. " !")
+end
 
 local function show_assemble()
   local buf = vim.fn.expand("%:p")
@@ -552,15 +588,15 @@ function tangle_write(filename, lines)
 end
 
 function tangle_lines(filename, lines)
+  local sections_ll = {}
+  
+  local roots = {}
+  
   local asm
   
   local untangled_ll = {}
   
   local parts_ll = {}
-  
-  local sections_ll = {}
-  
-  local roots = {}
   
   local tangled_ll = {}
   
@@ -668,6 +704,7 @@ function tangle_lines(filename, lines)
     end
     
     
+    
   end
   
 
@@ -706,7 +743,6 @@ function tangle_lines(filename, lines)
             origin = origin,
           }
         end
-        
       
       elseif string.match(line, "^%s*@[^@]%S*%s*$") then
         local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
@@ -870,6 +906,14 @@ function tangle_all()
   end
 end
 
+function debug_array(l)
+	if #l == 0 then
+		print("{}")
+	end
+	for i, li in ipairs(l) do
+		print(i .. ": " .. vim.inspect(li))
+	end
+end
 function fill_border(borderbuf, border_opts, center_title, border_title)
 	local border_text = {}
 	
@@ -1334,6 +1378,8 @@ function linkedlist.iter_from_back(pos)
 	end
 end
 return {
+build_cache = build_cache,
+
 show_assemble = show_assemble,
 
 assembleNavigate = assembleNavigate,

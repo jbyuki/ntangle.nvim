@@ -1,5 +1,5 @@
 ##../ntangle_main
-@../lua/ntangle.lua=
+@../lua/ntangle/init.lua=
 @parse_variables
 @declare_functions
 @functions
