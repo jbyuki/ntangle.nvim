@@ -29,7 +29,6 @@ end
 @if_its_a_section_add_ref+=
 if string.match(line, "^@[^@]%S*[+-]?=%s*$") then
 	@extract_section_name
-	@skip_if_filename_and_option_enabled
 	@save_section_ref
 end
 

@@ -47,12 +47,12 @@ end
 
 @output_undefined_section_references+=
 for name, _ in pairs(undefined_section) do
-	table.insert(qflist, { name, " is empty" } )
+	table.insert(qflist, { name:gsub("_", " "), " is empty" } )
 end
 
 @output_orphan_sections+=
 for name, _ in pairs(orphan_section) do
-	table.insert(qflist, { name , " orphan section" })
+	table.insert(qflist, { name:gsub("_", " ") , " orphan section" })
 end
 
 @compute_max_width_for_helper_window+=

@@ -1162,11 +1162,11 @@ local function show_helper()
 	
 
   for name, _ in pairs(undefined_section) do
-  	table.insert(qflist, { name, " is empty" } )
+  	table.insert(qflist, { name:gsub("_", " "), " is empty" } )
   end
   
   for name, _ in pairs(orphan_section) do
-  	table.insert(qflist, { name , " orphan section" })
+  	table.insert(qflist, { name:gsub("_", " ") , " orphan section" })
   end
   
 
