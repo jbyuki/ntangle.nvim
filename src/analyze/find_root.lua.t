@@ -8,7 +8,7 @@ local function getRootFilename()
 
   local roots = {}
   for name, root in pairs(tangled.roots) do
-    table.insert(roots, get_origin(filename, tangled.asm, name))
+    table.insert(roots, get_origin(buf, tangled.asm, name))
   end
 
   if #roots == 0 then
