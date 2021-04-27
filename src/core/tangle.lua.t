@@ -47,6 +47,9 @@ function tangle_lines(filename, lines)
   }
 end
 
+@export_symbols+=
+tangle_buf = tangle_buf,
+tangle_lines = tangle_lines,
 
 @tangle_variables+=
 local asm
@@ -159,6 +162,9 @@ end
 @tangle_variables+=
 local parts_ll = {}
 
+@return_tangle+=
+parts_ll = parts_ll,
+
 @append_part_to_parts_ll+=
 if origin then
   linkedlist.push_back(parts_ll, {
@@ -172,11 +178,6 @@ end
 local origin = filename
 @place_sentinels_in_untangled
 @append_part_to_parts_ll
-
-
-@export_symbols+=
-tangle_buf = tangle_buf,
-tangle_lines = tangle_lines,
 
 @parse_foreach_part+=
 for part in linkedlist.iter(parts_ll) do
@@ -364,6 +365,3 @@ if modified then
 		print(err)
 	end
 end
-
-@return_tangle+=
-parts_ll = parts_ll,

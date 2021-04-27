@@ -583,7 +583,6 @@ function tangle_write(filename, lines)
     		print(err)
     	end
     end
-    
   end
 end
 
@@ -703,7 +702,6 @@ function tangle_lines(filename, lines)
         origin = origin,
       })
     end
-    
     
     
   end
@@ -878,15 +876,15 @@ function tangle_lines(filename, lines)
   end
 
   return {
+    parts_ll = parts_ll,
+    
     asm = asm,
     roots = roots,
     tangled_ll = tangled_ll,
     untangled_ll = untangled_ll,
     
-    parts_ll = parts_ll,
   }
 end
-
 
 function tangle_all()
   local files = vim.split(vim.fn.glob("**/*.t"), "\n")
