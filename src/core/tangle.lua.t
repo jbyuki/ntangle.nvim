@@ -47,19 +47,6 @@ function tangle_lines(filename, lines)
   }
 end
 
-@if_star_replace_with_current_filename+=
-if name == "*" then
-	local tail = vim.fn.fnamemodify(filename, ":t:r" )
-	fn = parendir .. "/tangle/" .. tail
-
-@otherwise_put_node_name+=
-else
-	if string.find(name, "/") then
-		fn = parendir .. "/" .. name
-	else
-		fn = parendir .. "/tangle/" .. name
-	end
-end
 
 @tangle_variables+=
 local asm
@@ -80,6 +67,9 @@ if string.match(lines[1], "^##%S*%s*$") then
 else
   @add_current_part_info
 end
+
+@extract_assembly_name+=
+local name = string.match(line, "^##(%S*)%s*$")
 
 @construct_path_for_link_file+=
 local fn = filename or vim.api.nvim_buf_get_name(0)
@@ -123,8 +113,6 @@ link_file:write(fn)
 link_file:close()
 
 
-@extract_assembly_name+=
-local name = string.match(line, "^##(%S*)%s*$")
 
 @get_assembly_folder+=
 local asm_folder = vim.fn.fnamemodify(filename, ":p:h") .. "/" .. assembly_parendir .. "/tangle/"

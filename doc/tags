@@ -2,6 +2,7 @@ ntangle-assembly	ntangle.txt	/*ntangle-assembly*
 ntangle-assembly-view	ntangle.txt	/*ntangle-assembly-view*
 ntangle-dap	ntangle.txt	/*ntangle-dap*
 ntangle-generation	ntangle.txt	/*ntangle-generation*
+ntangle-helper	ntangle.txt	/*ntangle-helper*
 ntangle-intro	ntangle.txt	/*ntangle-intro*
 ntangle-literate-programming	ntangle.txt	/*ntangle-literate-programming*
 ntangle-lsp	ntangle.txt	/*ntangle-lsp*

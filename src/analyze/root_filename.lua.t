@@ -14,3 +14,17 @@ function get_origin(filename, asm, name)
   @otherwise_put_node_name
   return fn
 end
+
+@if_star_replace_with_current_filename+=
+if name == "*" then
+	local tail = vim.fn.fnamemodify(filename, ":t:r" )
+	fn = parendir .. "/tangle/" .. tail
+
+@otherwise_put_node_name+=
+else
+	if string.find(name, "/") then
+		fn = parendir .. "/" .. name
+	else
+		fn = parendir .. "/tangle/" .. name
+	end
+end

@@ -296,9 +296,9 @@ function get_origin(filename, asm, name)
   		fn = parendir .. "/tangle/" .. name
   	end
   end
-  
   return fn
 end
+
 local function transpose()
   local buf = vim.fn.expand("%:p")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -645,6 +645,7 @@ function tangle_lines(filename, lines)
     link_file:close()
     
     
+    
     local asm_tail = vim.fn.fnamemodify(asm, ":t")
     local parts = vim.split(vim.fn.glob(asm_folder .. asm_tail .. ".*.t"), "\n")
     
@@ -885,6 +886,7 @@ function tangle_lines(filename, lines)
     parts_ll = parts_ll,
   }
 end
+
 
 function tangle_all()
   local files = vim.split(vim.fn.glob("**/*.t"), "\n")
