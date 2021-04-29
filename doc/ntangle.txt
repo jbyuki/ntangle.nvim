@@ -35,7 +35,7 @@ for the computers to read, we should write programs for other
 humans to read. 
 
 In the modern era, literate programming while still being not
-a dominant form as may be Knuth imagined it, it has still taken
+a dominant form as may be Knuth imagined it, has still taken
 many form with tools like Jupyter Notebook, org-mode or custom
 tools made by programmers.
 
@@ -108,7 +108,7 @@ Files in subfolders can also be part of the same assembly by specifing a
 relative path.
 
 >
-  line 1     ../##snippets
+  line 1     ##../snippets
   line 2     ...
 <
 
