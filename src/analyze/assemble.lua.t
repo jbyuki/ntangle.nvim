@@ -12,12 +12,7 @@ local function show_assemble()
 
   @save_cursor_position
   @save_current_filetype
-  @create_buffer_if_not_existent
-  @get_current_window_dimensions
-  @create_window_for_transpose
-  local border_title = "Assembly"
-  @create_border_around_transpose_window
-  @setup_transpose_buffer
+  create_transpose_buf("Assembly", ft)
 
   @put_lines_in_assemble_buffer
   @find_current_assemble_line

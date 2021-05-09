@@ -14,26 +14,9 @@ end
 local border_text = {}
 
 local border_chars = {
-	topleft  = '╭',
-	topright = '╮',
-	top      = '─',
-	left     = '│',
-	right    = '│',
-	botleft  = '╰',
-	botright = '╯',
-	bot      = '─',
+	topleft  = '╭', topright = '╮', top      = '─', left     = '│',
+	right    = '│', botleft  = '╰', botright = '╯', bot      = '─',
 }
-
--- local border_chars = {
-	-- topleft  = '╔',
-	-- topright = '╗',
-	-- top      = '═',
-	-- left     = '║',
-	-- right    = '║',
-	-- botleft  = '╚',
-	-- botright = '╝',
-	-- bot      = '═',
--- }
 
 for y=1,border_opts.height do
 	local line = ""

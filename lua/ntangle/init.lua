@@ -26,19 +26,19 @@ local contextmenu_contextmenu
 
 local contextmenu_win
 
-local cache_jump
-
 linkedlist = {}
 
 local get_origin
+
+local create_transpose_buf
 
 local tangle_buf
 local tangle_lines
 local tangle_write
 
-local tangle_all
+local generate_header
 
-local debug_array
+local tangle_all
 
 local fill_border
 
@@ -105,48 +105,7 @@ local function show_assemble()
   
   local ft = vim.api.nvim_buf_get_option(0, "ft")
   
-  transpose_buf = vim.api.nvim_create_buf(false, true)
-  
-  local perc = 0.8
-  local win_width  = vim.api.nvim_win_get_width(0)
-  local win_height = vim.api.nvim_win_get_height(0)
-  local width = math.floor(perc*win_width)
-  local height = math.floor(perc*win_height)
-  
-  local opts = {
-  	width = width,
-  	height = height,
-  	row = math.floor((win_height-height)/2),
-  	col = math.floor((win_width-width)/2),
-  	relative = "win",
-  	win = vim.api.nvim_get_current_win(),
-  }
-  
-  transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-  
-  local border_title = "Assembly"
-  local borderbuf = vim.api.nvim_create_buf(false, true)
-  
-  local border_opts = {
-  	relative = "win",
-  	win = vim.api.nvim_get_current_win(),
-  	width = opts.width+2,
-  	height = opts.height+2,
-  	col = opts.col-1,
-  	row =  opts.row-1,
-  	style = 'minimal'
-  }
-  
-  local center_title = true
-  fill_border(borderbuf, border_opts, center_title, border_title)
-  
-  
-  borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-  vim.api.nvim_set_current_win(transpose_win)
-  vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-  
-  vim.api.nvim_buf_set_option(0, "ft", ft)
-  
+  create_transpose_buf("Assembly", ft)
 
   vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
   
@@ -316,17 +275,7 @@ local function transpose()
     local lnum = 1
     local lines = {}
     local fn = get_origin(buf, tangled.asm, name)
-    if string.match(fn, "%.lua$") then
-    	table.insert(lines, "-- Generated using ntangle.nvim")
-    end
-    
-    if string.match(fn, "%.vim$") then
-    	table.insert(lines, "\" Generated using ntangle.nvim")
-    end
-    
-    if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
-    	table.insert(lines, "// Generated using ntangle.nvim")
-    end
+    generate_header(fn, lines)
     
     lnum = lnum + #lines
   
@@ -364,64 +313,13 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-		transpose_buf = vim.api.nvim_create_buf(false, true)
-		
-		local perc = 0.8
-		local win_width  = vim.api.nvim_win_get_width(0)
-		local win_height = vim.api.nvim_win_get_height(0)
-		local width = math.floor(perc*win_width)
-		local height = math.floor(perc*win_height)
-		
-		local opts = {
-			width = width,
-			height = height,
-			row = math.floor((win_height-height)/2),
-			col = math.floor((win_width-width)/2),
-			relative = "win",
-			win = vim.api.nvim_get_current_win(),
-		}
-		
-		transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-		
-		local border_title = "Transpose"
-		local borderbuf = vim.api.nvim_create_buf(false, true)
-		
-		local border_opts = {
-			relative = "win",
-			win = vim.api.nvim_get_current_win(),
-			width = opts.width+2,
-			height = opts.height+2,
-			col = opts.col-1,
-			row =  opts.row-1,
-			style = 'minimal'
-		}
-		
-		local center_title = true
-		fill_border(borderbuf, border_opts, center_title, border_title)
-		
-		
-		borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-		vim.api.nvim_set_current_win(transpose_win)
-		vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-		
-		vim.api.nvim_buf_set_option(0, "ft", ft)
-		
+    create_transpose_buf("Transpose", ft, ft)
 
 		local transpose_lines = {}
 		
 		local lines = {}
 		local fn = get_origin(buf, tangled.asm, jumpline.data.root)
-		if string.match(fn, "%.lua$") then
-			table.insert(lines, "-- Generated using ntangle.nvim")
-		end
-		
-		if string.match(fn, "%.vim$") then
-			table.insert(lines, "\" Generated using ntangle.nvim")
-		end
-		
-		if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
-			table.insert(lines, "// Generated using ntangle.nvim")
-		end
+		generate_header(fn, lines)
 		
 		
 		for _, line in ipairs(lines) do
@@ -462,6 +360,50 @@ local function transpose()
 		end
 		contextmenu_open(options, selected)
 	end
+end
+
+function create_transpose_buf(border_title, ft)
+  transpose_buf = vim.api.nvim_create_buf(false, true)
+  
+  local perc = 0.8
+  local win_width  = vim.api.nvim_win_get_width(0)
+  local win_height = vim.api.nvim_win_get_height(0)
+  local width = math.floor(perc*win_width)
+  local height = math.floor(perc*win_height)
+  
+  local opts = {
+  	width = width,
+  	height = height,
+  	row = math.floor((win_height-height)/2),
+  	col = math.floor((win_width-width)/2),
+  	relative = "win",
+  	win = vim.api.nvim_get_current_win(),
+  }
+  
+  transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+  
+  local borderbuf = vim.api.nvim_create_buf(false, true)
+  
+  local border_opts = {
+  	relative = "win",
+  	win = vim.api.nvim_get_current_win(),
+  	width = opts.width+2,
+  	height = opts.height+2,
+  	col = opts.col-1,
+  	row =  opts.row-1,
+  	style = 'minimal'
+  }
+  
+  local center_title = true
+  fill_border(borderbuf, border_opts, center_title, border_title)
+  
+  
+  borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
+  vim.api.nvim_set_current_win(transpose_win)
+  vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+  
+  vim.api.nvim_buf_set_option(0, "ft", ft)
+  
 end
 
 local function navigateTo()
@@ -523,17 +465,7 @@ function tangle_write(filename, lines)
     local fn = get_origin(filename, tangled.asm, name)
 
     local lines = {}
-    if string.match(fn, "%.lua$") then
-    	table.insert(lines, "-- Generated using ntangle.nvim")
-    end
-    
-    if string.match(fn, "%.vim$") then
-    	table.insert(lines, "\" Generated using ntangle.nvim")
-    end
-    
-    if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
-    	table.insert(lines, "// Generated using ntangle.nvim")
-    end
+    generate_header(fn, lines)
     
     local it = root.tangled[1]
     while it and it ~= root.tangled[2] do
@@ -886,6 +818,20 @@ function tangle_lines(filename, lines)
   }
 end
 
+function generate_header(fn, lines)
+  if string.match(fn, "%.lua$") then
+    table.insert(lines, "-- Generated using ntangle.nvim")
+  end
+
+  if string.match(fn, "%.vim$") then
+    table.insert(lines, "\" Generated using ntangle.nvim")
+  end
+
+  if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
+    table.insert(lines, "// Generated using ntangle.nvim")
+  end
+end
+
 function tangle_all()
   local files = vim.split(vim.fn.glob("**/*.t"), "\n")
   
@@ -906,38 +852,13 @@ function tangle_all()
   end
 end
 
-function debug_array(l)
-	if #l == 0 then
-		print("{}")
-	end
-	for i, li in ipairs(l) do
-		print(i .. ": " .. vim.inspect(li))
-	end
-end
 function fill_border(borderbuf, border_opts, center_title, border_title)
 	local border_text = {}
 	
 	local border_chars = {
-		topleft  = '╭',
-		topright = '╮',
-		top      = '─',
-		left     = '│',
-		right    = '│',
-		botleft  = '╰',
-		botright = '╯',
-		bot      = '─',
+		topleft  = '╭', topright = '╮', top      = '─', left     = '│',
+		right    = '│', botleft  = '╰', botright = '╯', bot      = '─',
 	}
-	
-	-- local border_chars = {
-		-- topleft  = '╔',
-		-- topright = '╗',
-		-- top      = '═',
-		-- left     = '║',
-		-- right    = '║',
-		-- botleft  = '╚',
-		-- botright = '╝',
-		-- bot      = '═',
-	-- }
 	
 	for y=1,border_opts.height do
 		local line = ""
@@ -1058,81 +979,6 @@ local function select_contextmenu()
 		contextmenu_contextmenu(row)
 		contextmenu_contextmenu = nil
 	end
-end
-
-local function search_cache()
-  transpose_buf = vim.api.nvim_create_buf(false, true)
-  
-  local perc = 0.8
-  local win_width  = vim.api.nvim_win_get_width(0)
-  local win_height = vim.api.nvim_win_get_height(0)
-  local width = math.floor(perc*win_width)
-  local height = math.floor(perc*win_height)
-  
-  local opts = {
-  	width = width,
-  	height = height,
-  	row = math.floor((win_height-height)/2),
-  	col = math.floor((win_width-width)/2),
-  	relative = "win",
-  	win = vim.api.nvim_get_current_win(),
-  }
-  
-  transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-  
-  local border_title = " ntangle cache "
-  local borderbuf = vim.api.nvim_create_buf(false, true)
-  
-  local border_opts = {
-  	relative = "win",
-  	win = vim.api.nvim_get_current_win(),
-  	width = opts.width+2,
-  	height = opts.height+2,
-  	col = opts.col-1,
-  	row =  opts.row-1,
-  	style = 'minimal'
-  }
-  
-  local center_title = true
-  fill_border(borderbuf, border_opts, center_title, border_title)
-  
-  
-  borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-  vim.api.nvim_set_current_win(transpose_win)
-  vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-  
-
-  local filename = vim.g.tangle_cache_file
-  
-  if not cache_jump then
-    cache_jump = {}
-    for line in io.lines(filename) do
-      table.insert(cache_jump, line)
-    end
-  end
-  
-  vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, true, cache_jump)
-  
-
-  vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<cr>', [[<cmd>lua require"ntangle".jump_cache()<cr>]], { noremap = true })
-  
-end
-
-local function jump_cache()
-  local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
-  
-  local entry = cache_jump[row]
-  
-  local words = vim.split(entry, " ")
-  local filename = words[#words]
-  table.remove(words)
-  local section_name = table.concat(words, "_")
-  
-  vim.api.nvim_win_close(0, true)
-  
-
-  vim.api.nvim_command("edit " .. filename)
-  vim.api.nvim_command("call search(\"" .. section_name .. "\")")
 end
 
 local function show_helper()
@@ -1394,10 +1240,6 @@ tangle_lines = tangle_lines,
 
 tangle_all = tangle_all,
 select_contextmenu = select_contextmenu,
-
-search_cache = search_cache,
-
-jump_cache = jump_cache,
 
 show_helper = show_helper,
 

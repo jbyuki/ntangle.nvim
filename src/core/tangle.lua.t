@@ -300,18 +300,26 @@ roots = roots,
 tangled_ll = tangled_ll,
 untangled_ll = untangled_ll,
 
+@declare_functions+=
+local generate_header
+
+@functions+=
+function generate_header(fn, lines)
+  if string.match(fn, "%.lua$") then
+    table.insert(lines, "-- Generated using ntangle.nvim")
+  end
+
+  if string.match(fn, "%.vim$") then
+    table.insert(lines, "\" Generated using ntangle.nvim")
+  end
+
+  if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
+    table.insert(lines, "// Generated using ntangle.nvim")
+  end
+end
+
 @output_ntangle_header+=
-if string.match(fn, "%.lua$") then
-	table.insert(lines, "-- Generated using ntangle.nvim")
-end
-
-if string.match(fn, "%.vim$") then
-	table.insert(lines, "\" Generated using ntangle.nvim")
-end
-
-if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
-	table.insert(lines, "// Generated using ntangle.nvim")
-end
+generate_header(fn, lines)
 
 @collect_tangled_lines+=
 local it = root.tangled[1]

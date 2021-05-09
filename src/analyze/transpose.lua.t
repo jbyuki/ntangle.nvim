@@ -17,12 +17,7 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-		@create_buffer_if_not_existent
-		@get_current_window_dimensions
-		@create_window_for_transpose
-		local border_title = "Transpose"
-		@create_border_around_transpose_window
-		@setup_transpose_buffer
+    create_transpose_buf("Transpose", ft, ft)
 
 		@put_lines_in_buffer
 		@keymap_transpose_buffer
@@ -74,6 +69,18 @@ for part in linkedlist.iter(tangled.parts_ll) do
 
     if jumplines then break end
   end
+end
+
+@declare_functions+=
+local create_transpose_buf
+
+@functions+=
+function create_transpose_buf(border_title, ft)
+  @create_buffer_if_not_existent
+  @get_current_window_dimensions
+  @create_window_for_transpose
+  @create_border_around_transpose_window
+  @setup_transpose_buffer
 end
 
 @get_current_window_dimensions+=
