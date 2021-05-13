@@ -346,7 +346,9 @@ local function transpose()
       root = jumpline.data.root,
     }
     
-		vim.fn.setpos(".", {0, jumpline.data.lnum, 0, 0})
+		vim.schedule(function()
+		  vim.api.nvim_win_set_cursor(transpose_win, {jumpline.data.lnum, 0})
+		end)
 		
 	end
 

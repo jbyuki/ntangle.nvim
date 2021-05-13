@@ -160,7 +160,9 @@ end
 vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
 
 @jump_to_lines_in_transpose_buffer+=
-vim.fn.setpos(".", {0, jumpline.data.lnum, 0, 0})
+vim.schedule(function()
+  vim.api.nvim_win_set_cursor(transpose_win, {jumpline.data.lnum, 0})
+end)
 
 @parse_variables+=
 local nagivationLines = {}
