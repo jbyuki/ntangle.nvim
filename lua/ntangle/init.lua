@@ -448,7 +448,9 @@ local function navigateTo()
       if origin then break end
     end
     
-    vim.api.nvim_command("e " .. origin)
+    if vim.fn.expand("%:p") ~= origin then
+      vim.api.nvim_command("e " .. origin)
+    end
     vim.api.nvim_win_set_cursor(0, {lnum, 0})
     
   end

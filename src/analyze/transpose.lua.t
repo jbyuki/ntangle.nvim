@@ -228,7 +228,9 @@ for part in linkedlist.iter(tangled.parts_ll) do
 end
 
 @jump_to_linenumber+=
-vim.api.nvim_command("e " .. origin)
+if vim.fn.expand("%:p") ~= origin then
+  vim.api.nvim_command("e " .. origin)
+end
 vim.api.nvim_win_set_cursor(0, {lnum, 0})
 
 @save_current_filetype+=
