@@ -34,7 +34,7 @@ end
 @check_generated_content+=
 print("Checking generated.lua 2")
 
-assert(#lines == 3, "generated.lua is invalid")
+assert(#lines == 2, "generated.lua is invalid")
 
 @print_test_result+=
 local f = io.open("result.txt", "w")
