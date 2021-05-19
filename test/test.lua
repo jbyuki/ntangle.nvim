@@ -17,19 +17,7 @@ end
 local fail = false
 print("Checking generated.lua 2")
 
-if #lines ~= 3 then
-  fail = true
-end
-
-local f = io.open("result.txt")
-if fail then
-  f:write("FAIL")
-  print("FAIL")
-else
-  f:write("OK")
-  print("OK")
-end
-f:close()
+assert(#lines == 3, "...")
 vim.loop.fs_rmdir("testtangle")
 
 

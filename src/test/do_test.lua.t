@@ -34,17 +34,4 @@ end
 @check_generated_content+=
 print("Checking generated.lua 2")
 
-if #lines ~= 3 then
-  fail = true
-end
-
-@print_test_result+=
-local f = io.open("result.txt")
-if fail then
-  f:write("FAIL")
-  print("FAIL")
-else
-  f:write("OK")
-  print("OK")
-end
-f:close()
+assert(#lines == 3, "...")
