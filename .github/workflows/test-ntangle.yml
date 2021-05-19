@@ -28,6 +28,6 @@ jobs:
           ls ${{ github.workspace }}
       - name: Run tests
         run: |
-          wget https://raw.githubusercontent.com/jbyuki/ntangle.nvim/master/test/hello.lua
-          ./build/nvim --headless -c "luafile hello.lua" -c "exit"
+          wget https://raw.githubusercontent.com/jbyuki/ntangle.nvim/master/test/test.lua
+          ./build/nvim --headless -c "luafile test.lua" -c "exit"
       - run: echo "🍏 This job's status is ${{ job.status }}."

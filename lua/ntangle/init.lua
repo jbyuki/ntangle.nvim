@@ -836,8 +836,8 @@ function generate_header(fn, lines)
   end
 end
 
-function tangle_all()
-  local files = vim.split(vim.fn.glob("**/*.t"), "\n")
+function tangle_all(path)
+  local files = vim.split(vim.fn.glob((path or "") .. "**/*.t"), "\n")
   
   -- kind of ugly but works
   -- first pass to write link files

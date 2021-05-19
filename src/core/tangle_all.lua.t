@@ -3,7 +3,7 @@
 local tangle_all
 
 @functions+=
-function tangle_all()
+function tangle_all(path)
   @glob_all_tangle_files
   -- kind of ugly but works
   -- first pass to write link files
@@ -19,7 +19,7 @@ function tangle_all()
 end
 
 @glob_all_tangle_files+=
-local files = vim.split(vim.fn.glob("**/*.t"), "\n")
+local files = vim.split(vim.fn.glob((path or "") .. "**/*.t"), "\n")
 
 @read_lines_from_file+=
 local lines = {}
