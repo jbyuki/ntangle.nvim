@@ -29,5 +29,5 @@ jobs:
       - name: Run tests
         run: |
           wget https://raw.githubusercontent.com/jbyuki/ntangle.nvim/master/test/test.lua
-          ./build/nvim --headless -c "luafile test.lua" -c "exit"
+          ./build/nvim --headless -c "luafile test.lua" -c "exit" | perl -ne 'exit 1 if /FAIL/' 
       - run: echo "🍏 This job's status is ${{ job.status }}."
