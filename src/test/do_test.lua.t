@@ -34,7 +34,7 @@ end
 @check_generated_content+=
 print("Checking generated.lua")
 
-if #lines ~= 2 then
+if #lines ~= 3 then
   fail = true
 end
 

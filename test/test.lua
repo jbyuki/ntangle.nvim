@@ -17,7 +17,7 @@ end
 local fail = false
 print("Checking generated.lua")
 
-if #lines ~= 2 then
+if #lines ~= 3 then
   fail = true
 end
 
