@@ -17,7 +17,11 @@ end
 local fail = false
 print("Checking generated.lua 2")
 
-assert(#lines == 3, "...")
+assert(#lines == 2, "generated.lua is invalid")
+
+local f = io.open("result.txt", "w")
+f:write("OK")
+f:close()
 vim.loop.fs_rmdir("testtangle")
 
 
