@@ -17,7 +17,7 @@ end
 local fail = false
 print("Checking generated.lua 2")
 
-assert(#lines == 2, "generated.lua is invalid")
+assert(#lines == 3, "generated.lua is invalid")
 
 local f = io.open("result.txt", "w")
 f:write("OK")
