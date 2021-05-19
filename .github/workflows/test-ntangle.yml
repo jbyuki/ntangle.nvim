@@ -30,7 +30,7 @@ jobs:
         run: |
           wget https://raw.githubusercontent.com/jbyuki/ntangle.nvim/master/test/test.lua
           cat test.lua
-          ./build/nvim --headless -c "luafile test.lua" -c "exit" > result.txt
-          echo "done"
+          ./build/nvim --headless -c "luafile test.lua" -c "exit"
+          echo "Done"
           cat result.txt
       - run: echo "🍏 This job's status is ${{ job.status }}."

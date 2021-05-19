@@ -39,8 +39,12 @@ if #lines ~= 3 then
 end
 
 @print_test_result+=
+local f = io.open("result.txt")
 if fail then
+  f:write("FAIL")
   print("FAIL")
 else
+  f:write("OK")
   print("OK")
 end
+f:close()
