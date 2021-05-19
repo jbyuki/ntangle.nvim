@@ -32,7 +32,7 @@ for line in io.lines("testtangle/tangle/generated.lua") do
 end
 
 @check_generated_content+=
-print("Checking generated.lua")
+print("Checking generated.lua 2")
 
 if #lines ~= 3 then
   fail = true
