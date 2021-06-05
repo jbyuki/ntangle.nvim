@@ -6,12 +6,10 @@ local contextmenu_open
 function contextmenu_open(candidates, callback)
 	@compute_max_width_for_context_menu
 	@create_float_context_menu
-	@create_float_window_border_window_for_contextmenu
 	@put_text_in_context_menu
 	@attach_keymap_to_context_menu
 	@setup_context_menu_window
 	@save_contextmenu_callback
-	@attach_autocommand_to_close_border_window
 end
 
 @compute_max_width_for_context_menu+=
@@ -30,29 +28,11 @@ local opts = {
 	height = #candidates,
 	col = 2,
 	row =  2,
-	style = 'minimal'
+	style = 'minimal',
+  border = 'single',
 }
 
 contextmenu_win = vim.api.nvim_open_win(buf, false, opts)
-
-@create_float_window_border_window_for_contextmenu+=
-local borderbuf = vim.api.nvim_create_buf(false, true)
-
-local border_opts = {
-	relative = "cursor",
-	width = opts.width+2,
-	height = opts.height+2,
-	col = 1,
-	row =  1,
-	style = 'minimal'
-}
-
-fill_border(borderbuf, border_opts, false, "")
-
-local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-
-@attach_autocommand_to_close_border_window+=
-vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 
 @put_text_in_context_menu+=
 vim.api.nvim_buf_set_lines(buf, 0, -1, true, candidates)
@@ -86,7 +66,6 @@ local contextmenu_win
 vim.api.nvim_win_close(contextmenu_win, true)
 
 @setup_context_menu_window+=
-vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 vim.api.nvim_win_set_option(contextmenu_win, "winblend", 30)
 vim.api.nvim_win_set_option(contextmenu_win, "cursorline", true)
 vim.api.nvim_set_current_win(contextmenu_win)

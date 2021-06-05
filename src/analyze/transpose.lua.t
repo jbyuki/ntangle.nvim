@@ -17,7 +17,7 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-    create_transpose_buf("Transpose", ft, ft)
+    create_transpose_buf(ft)
 
 		@put_lines_in_buffer
 		@keymap_transpose_buffer
@@ -75,11 +75,10 @@ end
 local create_transpose_buf
 
 @functions+=
-function create_transpose_buf(border_title, ft)
+function create_transpose_buf(ft)
   @create_buffer_if_not_existent
   @get_current_window_dimensions
   @create_window_for_transpose
-  @create_border_around_transpose_window
   @setup_transpose_buffer
 end
 
@@ -98,38 +97,16 @@ local opts = {
 	col = math.floor((win_width-width)/2),
 	relative = "win",
 	win = vim.api.nvim_get_current_win(),
+  border = "single",
 }
 
-transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
+transpose_win = vim.api.nvim_open_win(transpose_buf, true, opts)
 
 @create_buffer_if_not_existent+=
 transpose_buf = vim.api.nvim_create_buf(false, true)
 
 @parse_variables+=
 local transpose_win, transpose_buf
-
-@create_border_around_transpose_window+=
-local borderbuf = vim.api.nvim_create_buf(false, true)
-
-local border_opts = {
-	relative = "win",
-	win = vim.api.nvim_get_current_win(),
-	width = opts.width+2,
-	height = opts.height+2,
-	col = opts.col-1,
-	row =  opts.row-1,
-	style = 'minimal'
-}
-
-local center_title = true
-@fill_buffer_with_border_characters
-
-borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-vim.api.nvim_set_current_win(transpose_win)
-vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
-
-@parse_variables+=
-local borderwin 
 
 @keymap_transpose_buffer+=
 vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
@@ -165,7 +142,7 @@ vim.schedule(function()
 end)
 
 @parse_variables+=
-local nagivationLines = {}
+local navigationLines = {}
 
 @save_lines_for_navigation+=
 navigationLines = {

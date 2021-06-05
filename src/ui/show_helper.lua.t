@@ -16,7 +16,6 @@ local function show_helper()
 	@if_no_text_to_display_add_some_info_text
 	@compute_max_width_for_helper_window
 	@create_float_window_for_helper
-	@create_float_window_border_window
 	@put_text_in_helper_window
   @attach_virtual_text_helper_window
 	@attach_autocommand_to_close_helper_on_movement
@@ -82,35 +81,14 @@ local opts = {
 	height = popup.height,
 	col = w - popup.width - popup.margin_right,
 	row =  popup.margin_up,
-	style = 'minimal'
+	style = 'minimal',
+  border = 'single',
 }
 
 local win = vim.api.nvim_open_win(buf, false, opts)
 
-@create_float_window_border_window+=
-local borderbuf = vim.api.nvim_create_buf(false, true)
-
-local border_opts = {
-	relative = "win",
-	win = vim.api.nvim_get_current_win(),
-	width = popup.width+2,
-	height = popup.height+2,
-	col = w - popup.width - popup.margin_right - 1,
-	row =  popup.margin_up - 1,
-	style = 'minimal'
-}
-
-local border_title = " ntangle helper "
-local center_title = true
-@fill_buffer_with_border_characters
-
-local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-
 @create_float_window_for_helper+=
 vim.api.nvim_win_set_option(win, "winblend", 30)
-
-@create_float_window_border_window+=
-vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 
 @put_text_in_helper_window+=
 local newlines = {}
@@ -130,7 +108,6 @@ end
 
 @attach_autocommand_to_close_helper_on_movement+=
 close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
-close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
 
 @if_no_text_to_display_add_some_info_text+=
 if #qflist == 0 then

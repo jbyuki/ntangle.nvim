@@ -3,9 +3,7 @@ local assemble_nav
 
 local transpose_win, transpose_buf
 
-local borderwin 
-
-local nagivationLines = {}
+local navigationLines = {}
 
 local LineType = {
 	ASSEMBLY = 5,
@@ -39,8 +37,6 @@ local tangle_write
 local generate_header
 
 local tangle_all
-
-local fill_border
 
 local contextmenu_open
 
@@ -105,7 +101,7 @@ local function show_assemble()
   
   local ft = vim.api.nvim_buf_get_option(0, "ft")
   
-  create_transpose_buf("Assembly", ft)
+  create_transpose_buf(ft)
 
   vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
   
@@ -313,7 +309,7 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-    create_transpose_buf("Transpose", ft, ft)
+    create_transpose_buf(ft)
 
 		local transpose_lines = {}
 		
@@ -364,7 +360,7 @@ local function transpose()
 	end
 end
 
-function create_transpose_buf(border_title, ft)
+function create_transpose_buf(ft)
   transpose_buf = vim.api.nvim_create_buf(false, true)
   
   local perc = 0.8
@@ -380,29 +376,10 @@ function create_transpose_buf(border_title, ft)
   	col = math.floor((win_width-width)/2),
   	relative = "win",
   	win = vim.api.nvim_get_current_win(),
+    border = "single",
   }
   
-  transpose_win = vim.api.nvim_open_win(transpose_buf, false, opts)
-  
-  local borderbuf = vim.api.nvim_create_buf(false, true)
-  
-  local border_opts = {
-  	relative = "win",
-  	win = vim.api.nvim_get_current_win(),
-  	width = opts.width+2,
-  	height = opts.height+2,
-  	col = opts.col-1,
-  	row =  opts.row-1,
-  	style = 'minimal'
-  }
-  
-  local center_title = true
-  fill_border(borderbuf, border_opts, center_title, border_title)
-  
-  
-  borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-  vim.api.nvim_set_current_win(transpose_win)
-  vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
+  transpose_win = vim.api.nvim_open_win(transpose_buf, true, opts)
   
   vim.api.nvim_buf_set_option(0, "ft", ft)
   
@@ -856,76 +833,6 @@ function tangle_all(path)
   end
 end
 
-function fill_border(borderbuf, border_opts, center_title, border_title)
-	local border_text = {}
-	
-	local border_chars = {
-		topleft  = '╭', topright = '╮', top      = '─', left     = '│',
-		right    = '│', botleft  = '╰', botright = '╯', bot      = '─',
-	}
-	
-	for y=1,border_opts.height do
-		local line = ""
-		if y == 1 then
-			if not center_title then
-				line = border_chars.topleft .. border_chars.top
-				local title_len = 0
-				if border_title then
-					line = line .. border_title
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				for x=2+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				line = line .. border_chars.topright
-				
-			else
-				line = border_chars.topleft
-				
-				local title_len = 0
-				if border_title then
-					title_len = vim.api.nvim_strwidth(border_title)
-				end
-				
-				local pad_left = math.floor((border_opts.width-title_len)/2)
-				
-				for x=2,pad_left do
-					line = line .. border_chars.top
-				end
-				
-				if border_title then
-					line = line .. border_title
-				end
-				
-				for x=pad_left+title_len+1,border_opts.width-1 do
-					line = line .. border_chars.top
-				end
-				
-				line = line .. border_chars.topright
-				
-			end
-		elseif y == border_opts.height then
-			line = border_chars.botleft
-			for x=2,border_opts.width-1 do
-				line = line .. border_chars.bot
-			end
-			line = line .. border_chars.botright
-			
-		else
-			line = border_chars.left
-			for x=2,border_opts.width-1 do
-				line = line .. " "
-			end
-			line = line .. border_chars.right
-		end
-		table.insert(border_text, line)
-	end
-	
-	vim.api.nvim_buf_set_lines(borderbuf, 0, -1, true, border_text)
-	
-end
-
 function contextmenu_open(candidates, callback)
 	local max_width = 0
 	for _, el in ipairs(candidates) do
@@ -941,37 +848,20 @@ function contextmenu_open(candidates, callback)
 		height = #candidates,
 		col = 2,
 		row =  2,
-		style = 'minimal'
+		style = 'minimal',
+	  border = 'single',
 	}
 	
 	contextmenu_win = vim.api.nvim_open_win(buf, false, opts)
-	
-	local borderbuf = vim.api.nvim_create_buf(false, true)
-	
-	local border_opts = {
-		relative = "cursor",
-		width = opts.width+2,
-		height = opts.height+2,
-		col = 1,
-		row =  1,
-		style = 'minimal'
-	}
-	
-	fill_border(borderbuf, border_opts, false, "")
-	
-	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
 	
 	vim.api.nvim_buf_set_lines(buf, 0, -1, true, candidates)
 	
 	vim.api.nvim_buf_set_keymap(buf, 'n', '<CR>', '<cmd>lua require"ntangle".select_contextmenu()<CR>', {noremap = true})
 	
-	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 	vim.api.nvim_win_set_option(contextmenu_win, "winblend", 30)
 	vim.api.nvim_win_set_option(contextmenu_win, "cursorline", true)
 	vim.api.nvim_set_current_win(contextmenu_win)
 	contextmenu_contextmenu = callback
-	
-	vim.api.nvim_command("autocmd WinLeave * ++once lua vim.api.nvim_win_close(" .. borderwin .. ", false)")
 	
 end
 
@@ -1049,33 +939,13 @@ local function show_helper()
 		height = popup.height,
 		col = w - popup.width - popup.margin_right,
 		row =  popup.margin_up,
-		style = 'minimal'
+		style = 'minimal',
+	  border = 'single',
 	}
 	
 	local win = vim.api.nvim_open_win(buf, false, opts)
 	
 	vim.api.nvim_win_set_option(win, "winblend", 30)
-	
-	local borderbuf = vim.api.nvim_create_buf(false, true)
-	
-	local border_opts = {
-		relative = "win",
-		win = vim.api.nvim_get_current_win(),
-		width = popup.width+2,
-		height = popup.height+2,
-		col = w - popup.width - popup.margin_right - 1,
-		row =  popup.margin_up - 1,
-		style = 'minimal'
-	}
-	
-	local border_title = " ntangle helper "
-	local center_title = true
-	fill_border(borderbuf, border_opts, center_title, border_title)
-	
-	
-	local borderwin = vim.api.nvim_open_win(borderbuf, false, border_opts)
-	
-	vim.api.nvim_win_set_option(borderwin, "winblend", 30)
 	
 	local newlines = {}
 	for _, p in ipairs(qflist) do
@@ -1092,7 +962,6 @@ local function show_helper()
     table.insert(newlines, p[1])
   end
 	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
-	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, borderwin)
 	
 end
 
