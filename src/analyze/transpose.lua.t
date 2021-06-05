@@ -83,9 +83,9 @@ function create_transpose_buf(ft)
 end
 
 @get_current_window_dimensions+=
-local perc = 0.8
-local win_width  = vim.api.nvim_win_get_width(0)
-local win_height = vim.api.nvim_win_get_height(0)
+local perc = 0.9
+local win_width  = vim.o.columns
+local win_height = vim.o.lines
 local width = math.floor(perc*win_width)
 local height = math.floor(perc*win_height)
 
@@ -95,8 +95,7 @@ local opts = {
 	height = height,
 	row = math.floor((win_height-height)/2),
 	col = math.floor((win_width-width)/2),
-	relative = "win",
-	win = vim.api.nvim_get_current_win(),
+	relative = "editor",
   border = "single",
 }
 
