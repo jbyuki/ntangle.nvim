@@ -380,8 +380,7 @@ function create_transpose_buf(ft)
   
   transpose_win = vim.api.nvim_open_win(transpose_buf, true, opts)
   
-  vim.api.nvim_buf_set_option(0, "ft", ft)
-  
+  -- @setup_transpose_buffer
 end
 
 local function navigateTo()
@@ -763,7 +762,7 @@ function tangle_lines(filename, lines)
         elseif line.linetype == LineType.TEXT then
           local l = {
             linetype = LineType.TANGLED,
-            str = prefix .. line.str,
+            str = (line.str ~= "" and prefix .. line.str) or "",
             untangled = it
           }
           tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)

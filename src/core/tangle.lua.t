@@ -286,7 +286,7 @@ TANGLED = 6,
 elseif line.linetype == LineType.TEXT then
   local l = {
     linetype = LineType.TANGLED,
-    str = prefix .. line.str,
+    str = (line.str ~= "" and prefix .. line.str) or "",
     untangled = it
   }
   tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)

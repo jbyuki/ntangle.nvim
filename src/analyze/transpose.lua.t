@@ -79,7 +79,7 @@ function create_transpose_buf(ft)
   @create_buffer_if_not_existent
   @get_current_window_dimensions
   @create_window_for_transpose
-  @setup_transpose_buffer
+  -- @setup_transpose_buffer
 end
 
 @get_current_window_dimensions+=
