@@ -24,7 +24,7 @@ local function ntangle_picker()
 			})
 		end
 	end
-	
+
 	pickers.new {
 		prompt_title = "ntangle section search",
 		finder = finders.new_table {
