@@ -24,6 +24,8 @@ local contextmenu_contextmenu
 
 local contextmenu_win
 
+local undefined_ns
+
 linkedlist = {}
 
 local get_origin
@@ -41,6 +43,8 @@ local tangle_all
 local contextmenu_open
 
 local close_preview_autocmd
+
+local clear_highlight_autocmd
 
 local function build_cache(filename)
 	local tangle_code_dir = "~/fakeroot/code"
@@ -959,12 +963,34 @@ local function show_helper()
     })
     table.insert(newlines, p[1])
   end
+
 	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
 
+
+  undefined_ns = vim.api.nvim_create_namespace("")
+
+  for lnum, line in ipairs(lines) do
+    for name, _ in pairs(undefined_section) do
+      local s1, s2 = line:find("@" .. name .. "$")
+      if s1 then
+        vim.api.nvim_buf_set_extmark(0, undefined_ns, lnum-1, s1-1, {
+          hl_group = "IncSearch",
+          end_col = s2
+        })
+
+      end
+    end
+  end
+
+  clear_highlight_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, undefined_ns)
 end
 
 function close_preview_autocmd(events, winnr)
   vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_win_close, "..winnr..", true)")
+end
+
+function clear_highlight_autocmd(events, ns)
+  vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_buf_clear_namespace, 0, "..ns..", 0, -1)")
 end
 
 function linkedlist.push_back(list, el)

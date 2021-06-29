@@ -19,6 +19,10 @@ local function show_helper()
 	@put_text_in_helper_window
   @attach_virtual_text_helper_window
 	@attach_autocommand_to_close_helper_on_movement
+
+  @create_undefined_section_highlight_namespace
+  @highlight_all_undefined_reference_in_current_buffer
+  @attach_autocommand_to_clear_highlight_on_movement
 end
 
 @export_symbols+=
@@ -122,3 +126,36 @@ for lnum, p in ipairs(qflist) do
   })
   table.insert(newlines, p[1])
 end
+
+@parse_variables+=
+local undefined_ns
+
+@create_undefined_section_highlight_namespace+=
+undefined_ns = vim.api.nvim_create_namespace("")
+
+@highlight_all_undefined_reference_in_current_buffer+=
+for lnum, line in ipairs(lines) do
+  for name, _ in pairs(undefined_section) do
+    local s1, s2 = line:find("@" .. name .. "$")
+    if s1 then
+      @put_higlight_on_undefined_reference
+    end
+  end
+end
+
+@put_higlight_on_undefined_reference+=
+vim.api.nvim_buf_set_extmark(0, undefined_ns, lnum-1, s1-1, {
+  hl_group = "IncSearch",
+  end_col = s2
+})
+
+@declare_functions+=
+local clear_highlight_autocmd
+
+@functions+=
+function clear_highlight_autocmd(events, ns)
+  vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_buf_clear_namespace, 0, "..ns..", 0, -1)")
+end
+
+@attach_autocommand_to_clear_highlight_on_movement+=
+clear_highlight_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, undefined_ns)
