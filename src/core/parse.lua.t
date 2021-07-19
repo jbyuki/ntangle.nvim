@@ -115,6 +115,9 @@ local sections_ll = {}
 sections_ll[name] = sections_ll[name] or {}
 linkedlist.push_back(sections_ll[name], it)
 
+@return_tangle+=
+sections_ll = sections_ll,
+
 @tangle_variables+=
 local roots = {}
 

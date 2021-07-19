@@ -419,4 +419,14 @@ ntangle.nvim dap                                             *ntangle-dap*
 There exists currently no known extension to do this. The user is expected
 to jump back to the untangled source file to do any debugging.
 
+==========================================================================
+ntangle highlight region                        *ntangle-highlight-region*
+
+Place the cursor on a reference line and highlight all the lines which
+are generated from that reference. This is useful to visually highlight
+semantic regions.
+>
+  :lua require"ntangle".highlight_span()
+<
+
  vim:tw=78:ts=8:ft=help:norl:
