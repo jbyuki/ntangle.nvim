@@ -47,6 +47,10 @@ local tangle_all
 
 local contextmenu_open
 
+local jump_cache
+
+local jump_this_ref
+
 local close_preview_autocmd
 
 local clear_highlight_autocmd
@@ -110,7 +114,7 @@ local function show_assemble()
 
   local ft = vim.api.nvim_buf_get_option(0, "ft")
 
-  create_transpose_buf(ft)
+  create_transpose_buf()
 
   vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
 
@@ -318,7 +322,7 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-    create_transpose_buf(ft)
+    create_transpose_buf()
 
 		local transpose_lines = {}
 
@@ -369,7 +373,7 @@ local function transpose()
 	end
 end
 
-function create_transpose_buf(ft)
+function create_transpose_buf()
   transpose_buf = vim.api.nvim_create_buf(false, true)
 
   local perc = 0.9
@@ -971,8 +975,9 @@ local function highlight_span()
   local line = vim.api.nvim_get_current_line()
   local len = string.len(line)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  vim.api.nvim_buf_set_extmark(0, span_ns, row-1, 0, { hl_group = "IncSearch",
-  end_col = len
+  vim.api.nvim_buf_set_extmark(0, span_ns, row-1, 0, { 
+    hl_group = "IncSearch",
+    end_col = len
   })
 
   highlighted[buf] = true
@@ -988,6 +993,65 @@ function clear_highlight_span()
     vim.api.nvim_buf_del_keymap(0, "n", "<CR>")
     highlighted[buf] = nil
   end
+end
+
+function jump_cache(cache_file)
+  create_transpose_buf()
+
+  cache_file = vim.fn.expand(cache_file)
+  local f = io.open(cache_file)
+  assert(f, "Could not open " .. cache_file)
+  f:close()
+
+  local lines = {}
+  for line in io.lines(cache_file) do
+    table.insert(lines, line)
+  end
+
+  vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, true, lines)
+
+  local ns = vim.api.nvim_create_namespace("")
+  for lnum, line in ipairs(lines) do
+    local words = vim.split(line, " ")
+    local fname = words[#words]
+    local len = string.len(fname)
+    local total_len = string.len(line)
+
+    vim.api.nvim_buf_set_extmark(transpose_buf, ns, lnum-1, total_len-len-1, {
+      end_col = total_len,
+      hl_group = "NonText",
+    })
+  end
+
+  vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<CR>', '<cmd>lua require"ntangle".jump_this_ref()<CR>', {noremap = true})
+
+end
+
+function jump_this_ref()
+  local line = vim.api.nvim_get_current_line()
+
+  local words = vim.split(line, " ")
+  local fname = words[#words]
+  table.remove(words)
+  local ref = table.concat(words, "_")
+
+
+  vim.cmd(string.format("e %s", fname))
+  print(fname)
+
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  local row
+  for lnum, line in ipairs(lines) do
+    if line:match("^%@" .. ref .. "%+%=") then
+      row = lnum
+      break
+    end
+  end
+
+  if row then
+    vim.api.nvim_win_set_cursor(0, { row, 0 })
+  end
+
 end
 
 local function show_helper()
@@ -1254,6 +1318,10 @@ select_contextmenu = select_contextmenu,
 highlight_span = highlight_span,
 
 clear_highlight_span = clear_highlight_span,
+
+jump_cache = jump_cache,
+
+jump_this_ref = jump_this_ref,
 
 show_helper = show_helper,
 

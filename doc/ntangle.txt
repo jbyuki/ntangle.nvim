@@ -374,6 +374,29 @@ It's also a good idea to bind it to a shortcut. For example:
 <
 
 ==========================================================================
+Index in ntangle.nvim                                    *ntangle-index*
+
+References can also be used to index code system-wide. The easiest is
+to build a cache using the function:
+>
+  require"ntangle".build_cache(filename)
+<
+Set all the code sources root directory in `vim.g.ntangle_code_dir`. By
+default, it won't search in the correct directory.
+
+`filename` is the destination `.txt` file. Put it somewhere in your
+in your home directory.
+
+Once the cache has been built (it can take several minutes if the number of
+files is large), references can be search with the helper window:
+>
+  require"ntangle".jump_cache(filename)
+<
+This will open a float window with all the references. Simply press `<CR>` to
+jump to the corresponding section. Standard search methods can be used look
+for a particular section.
+
+==========================================================================
 LSP with ntangle.nvim                                         *ntangle-lsp*
 
 

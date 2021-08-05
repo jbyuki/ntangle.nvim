@@ -17,7 +17,7 @@ local function transpose()
 	local selected = function(row) 
 		local jumpline = jumplines[row]
 
-    create_transpose_buf(ft)
+    create_transpose_buf()
 
 		@put_lines_in_buffer
 		@keymap_transpose_buffer
@@ -75,7 +75,7 @@ end
 local create_transpose_buf
 
 @functions+=
-function create_transpose_buf(ft)
+function create_transpose_buf()
   @create_buffer_if_not_existent
   @get_current_window_dimensions
   @create_window_for_transpose

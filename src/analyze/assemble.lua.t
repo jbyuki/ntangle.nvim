@@ -12,7 +12,7 @@ local function show_assemble()
 
   @save_cursor_position
   @save_current_filetype
-  create_transpose_buf(ft)
+  create_transpose_buf()
 
   @put_lines_in_assemble_buffer
   @find_current_assemble_line

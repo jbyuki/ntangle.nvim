@@ -132,6 +132,7 @@ clear_highlight_span = clear_highlight_span,
 local line = vim.api.nvim_get_current_line()
 local len = string.len(line)
 local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-vim.api.nvim_buf_set_extmark(0, span_ns, row-1, 0, { hl_group = "IncSearch",
-end_col = len
+vim.api.nvim_buf_set_extmark(0, span_ns, row-1, 0, { 
+  hl_group = "IncSearch",
+  end_col = len
 })
