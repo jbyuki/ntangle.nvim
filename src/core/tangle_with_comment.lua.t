@@ -15,11 +15,8 @@ local generate_comment
 @functions+=
 function generate_comment(root_name, line)
   -- Taken from http://lua-users.org/wiki/StringRecipes
-  local function tchelper(first,rest)
-    return first:upper() .. rest:lower()
-  end
-
-  title_case = line:gsub("(%a)([%w_']*)", tchelper)
+  title_case = line:gsub("_", " ")
+  title_case = title_case:gsub("^(%a)", string.upper)
   if string.match(root_name, "%.py$") then
     return ("# %s"):format(title_case)
   end
