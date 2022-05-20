@@ -45,6 +45,10 @@ local generate_header
 
 local tangle_all
 
+local generate_comment
+
+local tangle_buf_with_comments
+
 local contextmenu_open
 
 local jump_cache
@@ -447,11 +451,11 @@ end
 function tangle_buf()
   local filename = vim.fn.expand("%:p")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-  tangle_write(filename, lines)
+  tangle_write(filename, lines, false)
 end
 
-function tangle_write(filename, lines)
-  local tangled = tangle_lines(filename, lines)
+function tangle_write(filename, lines, comment)
+  local tangled = tangle_lines(filename, lines, comment)
 
   for name, root in pairs(tangled.roots) do
     local fn = get_origin(filename, tangled.asm, name)
@@ -510,7 +514,7 @@ function tangle_write(filename, lines)
   end
 end
 
-function tangle_lines(filename, lines)
+function tangle_lines(filename, lines, comment)
   local sections_ll = {}
 
   local roots = {}
@@ -728,7 +732,7 @@ function tangle_lines(filename, lines)
   end
 
 
-  local function tangle_rec(name, tangled_it, prefix)
+  local function tangle_rec(name, tangled_it, prefix, root_name)
     if not sections_ll[name] then
       return nil, tangled_it
     end
@@ -764,7 +768,16 @@ function tangle_lines(filename, lines)
 
         elseif line.linetype == LineType.REFERENCE then
           local start_ref
-          start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix)
+          if comment then
+            local l = {
+              linetype = LineType.TANGLED,
+              str = prefix .. line.prefix .. generate_comment(root_name,  line.str),
+              untangled = nil,
+            }
+            tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)
+          end
+
+          start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
           line.tangled = line.tangled or {}
           table.insert(line.tangled, start_ref)
 
@@ -793,7 +806,7 @@ function tangle_lines(filename, lines)
   local tangled_it = nil
   for name, ref in pairs(roots) do
     local it = ref.untangled.next
-    local start_root, end_root = tangle_rec(name, tangled_it, "")
+    local start_root, end_root = tangle_rec(name, tangled_it, "", name)
     roots[name].tangled = { start_root, end_root }
     tangled_it = end_root
 
@@ -844,6 +857,24 @@ function tangle_all(path)
       end
     end
   end
+end
+
+function generate_comment(root_name, line)
+  -- Taken from http://lua-users.org/wiki/StringRecipes
+  local function tchelper(first,rest)
+    return first:upper() .. rest:lower()
+  end
+
+  title_case = line:gsub("(%a)([%w_']*)", tchelper)
+  if string.match(root_name, "%.py$") then
+    return ("# %s"):format(title_case)
+  end
+end
+
+function tangle_buf_with_comments()
+  local filename = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  tangle_write(filename, lines, true)
 end
 
 function contextmenu_open(candidates, callback)
@@ -1313,6 +1344,7 @@ tangle_buf = tangle_buf,
 tangle_lines = tangle_lines,
 
 tangle_all = tangle_all,
+tangle_buf_with_comments = tangle_buf_with_comments, 
 select_contextmenu = select_contextmenu,
 
 highlight_span = highlight_span,
