@@ -20,6 +20,7 @@ function generate_comment(root_name, line)
   if string.match(root_name, "%.py$") then
     return ("# %s"):format(title_case)
   end
+  return ""
 end
 
 @declare_functions+=
