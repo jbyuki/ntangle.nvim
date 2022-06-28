@@ -150,7 +150,6 @@ local function get_code_at_cursor()
             local text = tangle_line.str
             local prefix_len = #line.prefix
             text = text:sub(1+prefix_len)
-            print(text)
             table.insert(code, text)
           end
           it = it.next

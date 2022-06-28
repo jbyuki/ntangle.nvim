@@ -53,7 +53,6 @@ while it ~= it_end do
   if tangle_line.linetype == LineType.TANGLED then
     local text = tangle_line.str
     @remove_prefix
-    print(text)
     table.insert(code, text)
   end
   it = it.next
