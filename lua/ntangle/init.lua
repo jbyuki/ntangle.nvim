@@ -124,10 +124,12 @@ local function get_code_at_cursor()
 
   local it = start_part
   local section_name 
+  local is_root
   while it and it ~= end_part do
     local line = it.data
     if line.linetype == LineType.SECTION then
       section_name = line.str
+      is_root = line.op == "="
     end
 
     if line.lnum and line.lnum >= row then
@@ -138,28 +140,37 @@ local function get_code_at_cursor()
 
   local code = {}
 
-  for line in linkedlist.iter(tangled.untangled_ll) do
-    if line.linetype == LineType.REFERENCE and line.str == section_name then
-      assert(line.tangled)
-      for i=1,#line.tangled do
-        local it = line.tangled[i][1]
-        local it_end = line.tangled[i][2]
-        while it ~= it_end do
-          local tangle_line = it.data
-          if tangle_line.linetype == LineType.TANGLED then
-            local text = tangle_line.str
-            local prefix_len = #line.prefix
-            text = text:sub(1+prefix_len)
-            table.insert(code, text)
-          end
-          it = it.next
-        end
+  if not is_root then
+    for line in linkedlist.iter(tangled.untangled_ll) do
+      if line.linetype == LineType.REFERENCE and line.str == section_name then
+        assert(line.tangled)
+        for i=1,#line.tangled do
+          local it = line.tangled[i][1]
+          local it_end = line.tangled[i][2]
+          while it ~= it_end do
+            local tangle_line = it.data
+            if tangle_line.linetype == LineType.TANGLED then
+              local text = tangle_line.str
+              local prefix_len = #line.prefix
+              text = text:sub(1+prefix_len)
 
+              table.insert(code, text)
+            end
+            it = it.next
+          end
+
+        end
+        break
       end
-      break
+    end
+
+  else
+    for line in linkedlist.iter(tangled.tangled_ll) do
+      if line.linetype == LineType.TANGLED then
+        table.insert(code, line.str)
+      end
     end
   end
-
   return code
 end
 
