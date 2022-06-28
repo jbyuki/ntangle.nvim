@@ -249,7 +249,7 @@ local start_ref
 @add_comment_if_enabled
 start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
 line.tangled = line.tangled or {}
-table.insert(line.tangled, start_ref)
+table.insert(line.tangled, { start_ref, tangled_it })
 
 @add_section_sentinel_tangled+=
 local start_section = linkedlist.insert_after(tangled_ll, tangled_it, {

@@ -93,6 +93,77 @@ local function build_cache(filename)
 	print("Cache written to " .. filename .. " !")
 end
 
+local function get_code_at_cursor()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+  local tangled = tangle_lines(buf, lines)
+
+  local start_part, end_part
+  for part in linkedlist.iter(tangled.parts_ll) do
+    if part.origin == buf then
+      start_part = part.start_part
+      end_part = part.end_part
+      break
+    end
+  end
+
+  local it = start_part
+  local lnum = 1
+  while it and it ~= end_part do
+    local line = it.data
+    if line.linetype ~= LineType.SENTINEL then
+      line.lnum = lnum
+      lnum = lnum + 1
+    end
+    it = it.next
+  end
+
+
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+  local it = start_part
+  local section_name 
+  while it and it ~= end_part do
+    local line = it.data
+    if line.linetype == LineType.SECTION then
+      section_name = line.str
+    end
+
+    if line.lnum and line.lnum >= row then
+      break
+    end
+    it = it.next
+  end
+
+  local code = {}
+
+  for line in linkedlist.iter(tangled.untangled_ll) do
+    if line.linetype == LineType.REFERENCE and line.str == section_name then
+      assert(line.tangled)
+      for i=1,#line.tangled do
+        local it = line.tangled[i][1]
+        local it_end = line.tangled[i][2]
+        while it ~= it_end do
+          local tangle_line = it.data
+          if tangle_line.linetype == LineType.TANGLED then
+            local text = tangle_line.str
+            local prefix_len = #line.prefix
+            text = text:sub(1+prefix_len)
+            print(text)
+            table.insert(code, text)
+          end
+          it = it.next
+        end
+
+      end
+      break
+    end
+  end
+
+  return code
+end
+
 local function show_assemble()
   local buf = vim.fn.expand("%:p")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -779,7 +850,7 @@ function tangle_lines(filename, lines, comment)
 
           start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
           line.tangled = line.tangled or {}
-          table.insert(line.tangled, start_ref)
+          table.insert(line.tangled, { start_ref, tangled_it })
 
 
         elseif line.linetype == LineType.ASSEMBLY then
@@ -1328,6 +1399,8 @@ function linkedlist.iter_from_back(pos)
 end
 return {
 build_cache = build_cache,
+
+get_code_at_cursor = get_code_at_cursor,
 
 show_assemble = show_assemble,
 
