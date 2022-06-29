@@ -61,6 +61,7 @@ while it and it.prev and it.prev ~= end_code do
     @compute_prefix_if_first_line
     @remove_prefix_for_line
     table.insert(code, txt)
+    print(txt)
   end
   it = it.next
 end
@@ -105,7 +106,7 @@ while it and it ~= end_part do
       start_code = line.tangled[1]
     end
 
-    if line.lnum == elnum+1 then
+    if line.lnum == elnum then
       end_code = line.tangled[1]
     end
   end

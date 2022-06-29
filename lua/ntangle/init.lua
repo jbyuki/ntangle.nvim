@@ -166,6 +166,7 @@ local function get_code_at_cursor()
       local txt = line.str:sub(prefix+1)
 
       table.insert(code, txt)
+      print(txt)
     end
     it = it.next
   end
@@ -213,7 +214,7 @@ local function get_code_at_vrange()
         start_code = line.tangled[1]
       end
 
-      if line.lnum == elnum+1 then
+      if line.lnum == elnum then
         end_code = line.tangled[1]
       end
     end
@@ -232,6 +233,7 @@ local function get_code_at_vrange()
       local txt = line.str:sub(prefix+1)
 
       table.insert(code, txt)
+      print(txt)
     end
     it = it.next
   end
