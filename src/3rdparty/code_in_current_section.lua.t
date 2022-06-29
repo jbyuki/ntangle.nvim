@@ -25,10 +25,15 @@ while it and it ~= end_part do
   if line.linetype == LineType.SECTION and line.tangled[1] then
     it = it.next
     @find_end_part
-    tangled_line = it.prev.data
-    if tangled_line.lnum > row and tangled_line.tangled[1] then
-      start_code = line.tangled[1]
-      end_code = tangled_line.tangled[1]
+    if in_section then
+      if untangled_line.linetype == LineType.SECTION then
+        untangled_line = it.prev.data
+        start_code = line.tangled[1]
+        end_code = untangled_line.tangled[1]
+      else
+        start_code = line.tangled[1]
+        end_code = nil
+      end
       break
     end
   else
@@ -36,16 +41,18 @@ while it and it ~= end_part do
   end
 end
 
-if not start_code or not end_code then
-  start_code = tangled.tangled_ll.head
-  end_code = nil
-end
+assert(start_code)
 
 @find_end_part+=
-local tangled_line = it.data
+local untangled_line = it.data
+local in_section = false
 while it and it ~= end_part do
-  tangled_line = it.data
-  if tangled_line.linetype == LineType.SECTION then
+  untangled_line = it.data
+  if untangled_line.lnum and untangled_line.lnum == row then
+    in_section = true
+  end
+
+  if untangled_line.linetype == LineType.SECTION then
     break
   end
   it = it.next
