@@ -166,7 +166,6 @@ local function get_code_at_cursor()
       local txt = line.str:sub(prefix+1)
 
       table.insert(code, txt)
-      print(txt)
     end
     it = it.next
   end
@@ -233,7 +232,6 @@ local function get_code_at_vrange()
       local txt = line.str:sub(prefix+1)
 
       table.insert(code, txt)
-      print(txt)
     end
     it = it.next
   end

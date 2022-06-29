@@ -61,7 +61,6 @@ while it and it.prev and it.prev ~= end_code do
     @compute_prefix_if_first_line
     @remove_prefix_for_line
     table.insert(code, txt)
-    print(txt)
   end
   it = it.next
 end
