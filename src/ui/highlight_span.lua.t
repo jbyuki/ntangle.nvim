@@ -8,7 +8,7 @@ local function highlight_span()
 
   local tangled = tangle_lines(buf, lines)
 
-  @augment_tangled_with_lnum_for_current_buffer
+  @augment_untangled_with_lnum_for_current_buffer
 
   @clear_highlight_namespace_for_span
 
@@ -39,7 +39,7 @@ end
 @export_symbols+=
 highlight_span = highlight_span,
 
-@augment_tangled_with_lnum_for_current_buffer+=
+@augment_untangled_with_lnum_for_current_buffer+=
 local start_part, end_part
 for part in linkedlist.iter(tangled.parts_ll) do
   if part.origin == buf then

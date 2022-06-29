@@ -121,56 +121,122 @@ local function get_code_at_cursor()
 
 
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local start_code, end_code
 
   local it = start_part
-  local section_name 
-  local is_root
   while it and it ~= end_part do
     local line = it.data
-    if line.linetype == LineType.SECTION then
-      section_name = line.str
-      is_root = line.op == "="
-    end
+    if line.linetype == LineType.SECTION and line.tangled[1] then
+      it = it.next
+      local tangled_line = it.data
+      while it and it ~= end_part do
+        tangled_line = it.data
+        if tangled_line.linetype == LineType.SECTION then
+          break
+        end
+        it = it.next
+      end
 
-    if line.lnum and line.lnum >= row then
-      break
+      if tangled_line.lnum > row and tangled_line.tangled[1] then
+        start_code = line.tangled[1]
+        end_code = tangled_line.tangled[1]
+        break
+      end
+    else
+      it = it.next
+    end
+  end
+
+  if not start_code or not end_code then
+    start_code = tangled.tangled_ll.head
+    end_code = nil
+  end
+
+  local code = {}
+  local it = start_code
+  local prefix
+  while it and it ~= end_code do 
+    local line = it.data
+    if line.linetype == LineType.TANGLED and line.str then
+      if #code == 0 then
+        prefix = string.match(line.str, "^%s*"):len()
+      end
+
+      local txt = line.str:sub(prefix+1)
+
+      table.insert(code, txt)
+      print(txt)
     end
     it = it.next
   end
 
-  local code = {}
+  return code
+end
 
-  if not is_root then
-    for line in linkedlist.iter(tangled.untangled_ll) do
-      if line.linetype == LineType.REFERENCE and line.str == section_name then
-        assert(line.tangled)
-        for i=1,#line.tangled do
-          local it = line.tangled[i][1]
-          local it_end = line.tangled[i][2]
-          while it ~= it_end do
-            local tangle_line = it.data
-            if tangle_line.linetype == LineType.TANGLED then
-              local text = tangle_line.str
-              local prefix_len = #line.prefix
-              text = text:sub(1+prefix_len)
+local function get_code_at_vrange()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
 
-              table.insert(code, text)
-            end
-            it = it.next
-          end
+  local tangled = tangle_lines(buf, lines)
 
-        end
-        break
-      end
-    end
-
-  else
-    for line in linkedlist.iter(tangled.tangled_ll) do
-      if line.linetype == LineType.TANGLED then
-        table.insert(code, line.str)
-      end
+  local start_part, end_part
+  for part in linkedlist.iter(tangled.parts_ll) do
+    if part.origin == buf then
+      start_part = part.start_part
+      end_part = part.end_part
+      break
     end
   end
+
+  local it = start_part
+  local lnum = 1
+  while it and it ~= end_part do
+    local line = it.data
+    if line.linetype ~= LineType.SENTINEL then
+      line.lnum = lnum
+      lnum = lnum + 1
+    end
+    it = it.next
+  end
+
+
+  local _,slnum,sbyte,vscol = unpack(vim.fn.getpos("'<"))
+  local _,elnum,ebyte,vecol = unpack(vim.fn.getpos("'>"))
+
+  local it = start_part
+  local start_code, end_code
+
+  while it and it ~= end_part do
+    local line = it.data
+    if line.lnum and line.tangled[1] then
+      if line.lnum == slnum then
+        start_code = line.tangled[1]
+      end
+
+      if line.lnum == elnum+1 then
+        end_code = line.tangled[1]
+      end
+    end
+    it = it.next
+  end
+  local code = {}
+  local it = start_code
+  local prefix
+  while it and it ~= end_code do 
+    local line = it.data
+    if line.linetype == LineType.TANGLED and line.str then
+      if #code == 0 then
+        prefix = string.match(line.str, "^%s*"):len()
+      end
+
+      local txt = line.str:sub(prefix+1)
+
+      table.insert(code, txt)
+      print(txt)
+    end
+    it = it.next
+  end
+
   return code
 end
 
@@ -860,7 +926,8 @@ function tangle_lines(filename, lines, comment)
 
           start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
           line.tangled = line.tangled or {}
-          table.insert(line.tangled, { start_ref, tangled_it })
+          -- can get range by picking the next element tangled
+          table.insert(line.tangled, start_ref)
 
 
         elseif line.linetype == LineType.ASSEMBLY then
@@ -1411,6 +1478,8 @@ return {
 build_cache = build_cache,
 
 get_code_at_cursor = get_code_at_cursor,
+
+get_code_at_vrange = get_code_at_vrange,
 
 show_assemble = show_assemble,
 
