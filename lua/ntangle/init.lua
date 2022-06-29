@@ -156,7 +156,7 @@ local function get_code_at_cursor()
   local code = {}
   local it = start_code
   local prefix
-  while it and it.prev and it.prev ~= end_code do 
+  while it and it ~= end_code do 
     local line = it.data
     if line.linetype == LineType.TANGLED and line.str then
       if #code == 0 then
@@ -213,7 +213,7 @@ local function get_code_at_vrange()
         start_code = line.tangled[1]
       end
 
-      if line.lnum == elnum then
+      if line.lnum == elnum+1 then
         end_code = line.tangled[1]
       end
     end
@@ -222,7 +222,7 @@ local function get_code_at_vrange()
   local code = {}
   local it = start_code
   local prefix
-  while it and it.prev and it.prev ~= end_code do 
+  while it and it ~= end_code do 
     local line = it.data
     if line.linetype == LineType.TANGLED and line.str then
       if #code == 0 then
