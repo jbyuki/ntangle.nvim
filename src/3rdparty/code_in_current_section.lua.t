@@ -25,6 +25,7 @@ while it and it ~= end_part do
   if line.linetype == LineType.SECTION and line.tangled[1] then
     it = it.next
     @find_end_part
+    tangled_line = it.prev.data
     if tangled_line.lnum > row and tangled_line.tangled[1] then
       start_code = line.tangled[1]
       end_code = tangled_line.tangled[1]
@@ -54,7 +55,7 @@ end
 local code = {}
 local it = start_code
 local prefix
-while it and it ~= end_code do 
+while it and it.prev and it.prev ~= end_code do 
   local line = it.data
   if line.linetype == LineType.TANGLED and line.str then
     @compute_prefix_if_first_line
