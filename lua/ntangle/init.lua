@@ -126,7 +126,7 @@ local function get_code_at_cursor()
   local it = start_part
   while it and it ~= end_part do
     local line = it.data
-    if line.linetype == LineType.SECTION and line.tangled[1] then
+    if line.linetype == LineType.SECTION and line.tangled and line.tangled[1] then
       it = it.next
       local untangled_line = it.data
       local in_section = false
@@ -148,8 +148,9 @@ local function get_code_at_cursor()
           start_code = line.tangled[1]
           end_code = untangled_line.tangled[1]
         else
+          untangled_line = it.prev.data
           start_code = line.tangled[1]
-          end_code = nil
+          end_code = untangled_line.tangled[1]
         end
         break
       end
@@ -215,7 +216,7 @@ local function get_code_at_vrange()
 
   while it and it ~= end_part do
     local line = it.data
-    if line.lnum and line.tangled[1] then
+    if line.lnum and line.tangled and line.tangled[1] then
       if line.lnum == slnum then
         start_code = line.tangled[1]
       end

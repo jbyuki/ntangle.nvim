@@ -22,7 +22,7 @@ local start_code, end_code
 local it = start_part
 while it and it ~= end_part do
   local line = it.data
-  if line.linetype == LineType.SECTION and line.tangled[1] then
+  if line.linetype == LineType.SECTION and line.tangled and line.tangled[1] then
     it = it.next
     @find_end_part
     if in_section then
@@ -31,8 +31,9 @@ while it and it ~= end_part do
         start_code = line.tangled[1]
         end_code = untangled_line.tangled[1]
       else
+        untangled_line = it.prev.data
         start_code = line.tangled[1]
-        end_code = nil
+        end_code = untangled_line.tangled[1]
       end
       break
     end
@@ -107,7 +108,7 @@ local start_code, end_code
 
 while it and it ~= end_part do
   local line = it.data
-  if line.lnum and line.tangled[1] then
+  if line.lnum and line.tangled and line.tangled[1] then
     if line.lnum == slnum then
       start_code = line.tangled[1]
     end
