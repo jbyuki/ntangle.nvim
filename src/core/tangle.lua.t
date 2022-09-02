@@ -315,9 +315,9 @@ function generate_header(fn, lines)
     table.insert(lines, "\" Generated using ntangle.nvim")
   end
 
-  if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
-    table.insert(lines, "// Generated using ntangle.nvim")
-  end
+  -- if string.match(fn, "%.cpp$") or string.match(fn, "%.h$") then
+    -- table.insert(lines, "// Generated using ntangle.nvim")
+  -- end
 end
 
 @output_ntangle_header+=
