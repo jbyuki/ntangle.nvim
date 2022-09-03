@@ -763,6 +763,7 @@ function tangle_lines(filename, lines, comment)
 
 
   else
+    asm = "."
     local origin = filename
     local start_part, end_part
     if origin then

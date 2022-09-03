@@ -68,6 +68,7 @@ if string.match(lines[1], "^##%S*%s*$") then
 
 @otherwise_only_add_current_part+=
 else
+  asm = "."
   @add_current_part_info
 end
 
