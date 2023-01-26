@@ -60,7 +60,7 @@ local close_preview_autocmd
 local clear_highlight_autocmd
 
 local function build_cache(filename)
-	local tangle_code_dir = "~/fakeroot/code"
+	local tangle_code_dir = vim.fn.expand("~/fakeroot/code")
 	local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
 
 	local globalcache = {}
@@ -82,7 +82,7 @@ local function build_cache(filename)
 
 	end
 
-	local cache = io.open(filename, "w")
+	local cache = io.open(vim.fn.expand(filename), "w")
 	for file, filerefs in pairs(globalcache) do
 		for name,_ in pairs(filerefs) do
 			local name_words = string.gsub(name, "_+", " ")

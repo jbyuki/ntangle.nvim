@@ -11,7 +11,7 @@ end
 build_cache = build_cache,
 
 @get_filelist+=
-local tangle_code_dir = "~/fakeroot/code"
+local tangle_code_dir = vim.fn.expand("~/fakeroot/code")
 local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
 
 @foreach_file_get_all_sections+=
@@ -48,7 +48,7 @@ local globalcache = {}
 globalcache[file] = filerefs
 
 @save_cache_file+=
-local cache = io.open(filename, "w")
+local cache = io.open(vim.fn.expand(filename), "w")
 for file, filerefs in pairs(globalcache) do
 	for name,_ in pairs(filerefs) do
 		local name_words = string.gsub(name, "_+", " ")
