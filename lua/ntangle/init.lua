@@ -1494,6 +1494,8 @@ show_assemble = show_assemble,
 assembleNavigate = assembleNavigate,
 
 getRootFilename = getRootFilename,
+get_origin = get_origin,
+
 transpose = transpose,
 
 navigateTo = navigateTo,

@@ -15,6 +15,9 @@ function get_origin(filename, asm, name)
   return fn
 end
 
+@export_symbols+=
+get_origin = get_origin,
+
 @if_star_replace_with_current_filename+=
 if name == "*" then
 	local tail = vim.fn.fnamemodify(filename, ":t:r" )
