@@ -23,7 +23,7 @@ jobs:
       - name: Prepare
         run: |
           mkdir -p ~/.local/share/nvim/site/pack/vendor/start
-          git clone --depth 1 https://github.com/jbyuki/nabla.nvim ~/.local/share/nvim/site/pack/vendor/start/nabla.nvim
+          git clone --depth 1 https://github.com/jbyuki/ntangle.nvim ~/.local/share/nvim/site/pack/vendor/start/ntangle.nvim
       - name: List files in the repository
         run: |
           ls ${{ github.workspace }}
