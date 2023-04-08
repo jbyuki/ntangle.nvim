@@ -54,6 +54,9 @@ local LineType = {
 	@line_types
 }
 
+@export_symbols+=
+LineType = LineType,
+
 @line_types+=
 ASSEMBLY = 5,
 

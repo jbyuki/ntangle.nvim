@@ -31,7 +31,7 @@ local highlighted = {}
 
 local undefined_ns
 
-linkedlist = {}
+local linkedlist = {}
 
 local get_origin
 
@@ -1500,6 +1500,8 @@ transpose = transpose,
 
 navigateTo = navigateTo,
 
+LineType = LineType,
+
 tangle_buf = tangle_buf,
 tangle_lines = tangle_lines,
 
@@ -1516,5 +1518,7 @@ jump_cache = jump_cache,
 jump_this_ref = jump_this_ref,
 
 show_helper = show_helper,
+
+linkedlist = linkedlist,
 
 }

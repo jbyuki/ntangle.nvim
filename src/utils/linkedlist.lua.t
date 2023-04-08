@@ -1,6 +1,9 @@
 ##../ntangle_main
 @parse_variables+=
-linkedlist = {}
+local linkedlist = {}
+
+@export_symbols+=
+linkedlist = linkedlist,
 
 @functions+=
 function linkedlist.push_back(list, el)
