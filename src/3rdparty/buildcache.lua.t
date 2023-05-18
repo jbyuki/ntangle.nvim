@@ -1,6 +1,7 @@
 ##../ntangle_main
 @functions+=
 local function build_cache(filename)
+	filename = filename or "~/ntangle_cache.txt"
 	@get_filelist
 	@cache_variables
 	@foreach_file_get_all_sections

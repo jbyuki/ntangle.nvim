@@ -60,6 +60,7 @@ local close_preview_autocmd
 local clear_highlight_autocmd
 
 local function build_cache(filename)
+	filename = filename or "~/ntangle_cache.txt"
 	local tangle_code_dir = vim.fn.expand("~/fakeroot/code")
 	local filelist = vim.api.nvim_call_function("glob", { tangle_code_dir .. "/**/*.t" })
 
