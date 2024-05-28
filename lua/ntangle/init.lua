@@ -65,6 +65,8 @@ local close_preview_autocmd
 
 local clear_highlight_autocmd
 
+local star_search
+
 local trim1
 
 local function build_cache(filename)
@@ -1919,6 +1921,27 @@ function clear_highlight_autocmd(events, ns)
   vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_buf_clear_namespace, 0, "..ns..", 0, -1)")
 end
 
+function star_search(...)
+	local line = vim.api.nvim_get_current_line()
+
+	local  col= vim.fn.col('.')
+
+
+	local start, stop =  string.find(line, '^%s*;+%s*')
+	if start then
+		local name = trim1(line:sub(stop+1))
+		local advance = ""
+		if col <= stop then
+			advance = "n" 
+		end
+
+		return "/" .. name .. '<CR>' .. advance
+	else
+		return "*"
+
+	end
+end
+
 function linkedlist.push_back(list, el)
 	local node = { data = el }
 
@@ -2093,6 +2116,8 @@ jump_cache = jump_cache,
 jump_this_ref = jump_this_ref,
 
 show_helper = show_helper,
+
+star_search = star_search,
 
 linkedlist = linkedlist,
 
