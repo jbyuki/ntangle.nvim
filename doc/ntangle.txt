@@ -397,7 +397,7 @@ jump to the corresponding section. Standard search methods can be used look
 for a particular section.
 
 ==========================================================================
-LSP with ntangle.nvim                                         *ntangle-lsp*
+LSP with ntangle.nvim                                       *ntangle-lsp*
 
 
 Only limited support is possible for now. See
@@ -408,7 +408,7 @@ for an experimental project which supports only clangd but can be extended
   to other languages. Please open an issue if you need this feature.
 
 ==========================================================================
-ntangle.nvim tree-sitter                               *ntangle-tree-sitter*
+ntangle.nvim tree-sitter                              *ntangle-tree-sitter*
 
 An experimental plugin which tries to support this is avaiable here:
 
@@ -474,13 +474,13 @@ The new syntax is as follows.
 To specify an assembly:
 >
   ;;; an assembly
-
+>
 The new syntax also allows spaces in the name. All spaces around the name are trimmed.
 
 To specify a section:
 >
   ;; an assembly
-
+>
 Syntax for sections and assemblies were chosen to be deliberately similar. Assemblies
 could be viewed as "super-sections","meta-sections", essentially sections that 
 can contain other sections and root sections.
@@ -488,11 +488,11 @@ can contain other sections and root sections.
 To specify a root section:
 >
   :: myfile.lua
-
+>
 To specify a reference
 >
   ; an assembly
-
+>
 Again, disamguation of references and sections is done at the beginning as
 opposed to v1. There is no more `-=` and `+=` as these can be quickly
 confusing due to assemblies and their random concatenation behaviour. Instead of `-=` , a
@@ -502,7 +502,7 @@ As of now, tangling of v2 syntax is fully supported in ntangle.nvim.
 Incremental tangling in the |ntangle-future| project will only support v2.
 
 ==========================================================================
-future                                                     *ntangle-future*
+future                                                    *ntangle-future*
 
 In a near future, I will implement a neovim fork which will implement
 tangling as a first-class feature. This will mean highlighting, LSP,
