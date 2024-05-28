@@ -453,7 +453,7 @@ semantic regions.
   :lua require"ntangle".highlight_span()
 
 ==========================================================================
-ntangle-v2						*ntangle-v2*
+ntangle-v2                                                    *ntangle-v2*
 
 The v2 ntangle syntax is an upcoming new syntax which will eventually replace
 the old syntax. However backward compatibility is ensured. All files using
@@ -502,7 +502,7 @@ As of now, tangling of v2 syntax is fully supported in ntangle.nvim.
 Incremental tangling in the |ntangle-future| project will only support v2.
 
 ==========================================================================
-future						*ntangle-future*
+future                                                     *ntangle-future*
 
 In a near future, I will implement a neovim fork which will implement
 tangling as a first-class feature. This will mean highlighting, LSP,
