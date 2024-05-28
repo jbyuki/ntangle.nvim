@@ -478,13 +478,13 @@ The new syntax is as follows.
 
 To specify an assembly:
 >
-  ;;; an assembly
+  ;;; a meta-section
 <
 The new syntax also allows spaces in the name. All spaces around the name are trimmed.
 
 To specify a section:
 >
-  ;; an assembly
+  ;; a section
 <
 Syntax for sections and assemblies were chosen to be deliberately similar. Assemblies
 could be viewed as "super-sections","meta-sections", essentially sections that 
@@ -496,7 +496,7 @@ To specify a root section:
 <
 To specify a reference
 >
-  ; an assembly
+  ; a reference
 <
 Again, disamguation of references and sections is done at the beginning as
 opposed to v1. There is no more `-=` and `+=` as these can be quickly
