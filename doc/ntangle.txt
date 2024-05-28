@@ -42,6 +42,11 @@ tools made by programmers.
 ==========================================================================
 An introduction to ntangle.nvim                            *ntangle-intro*
 
+>
+   Note that a v2 for the syntax is in the works. See |ntangle-v2| for more
+   informations.
+<
+
 ntangle.nvim is yet another tool for literate programming but tries to 
 put an accent on these concepts.
 
