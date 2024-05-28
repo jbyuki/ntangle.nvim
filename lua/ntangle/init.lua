@@ -53,6 +53,8 @@ local generate_comment
 
 local tangle_buf_with_comments
 
+local autocomplete_v2
+
 local contextmenu_open
 
 local jump_cache
@@ -62,6 +64,8 @@ local jump_this_ref
 local close_preview_autocmd
 
 local clear_highlight_autocmd
+
+local trim1
 
 local function build_cache(filename)
 	filename = filename or "~/ntangle_cache.txt"
@@ -1529,6 +1533,68 @@ function tangle_buf_with_comments()
   tangle_write(filename, lines, true)
 end
 
+function autocomplete_v2(findstart, base)
+	local line = vim.api.nvim_get_current_line()
+
+	local  col= vim.fn.col('.')
+
+	if findstart == 1 then
+		local start, stop =  string.find(line, '^%s*;+%s*')
+		if not start then
+			return -3
+		end
+		return stop
+
+
+	else
+		local candidates = {}
+		local candidates_list = {}
+
+		local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+		for _, l in ipairs(lines) do
+			local start, stop = l:find('^%s*;+%s*')
+			if start then
+				local name = trim1(l:sub(stop+1))
+				if #base == 0 or (#base < #name and name:sub(1,#base) == base) then
+					if not candidates[name] then
+						table.insert(candidates_list, name)
+						candidates[name] = true
+					end
+				end
+			end
+
+		end
+
+		local bufs = vim.api.nvim_list_bufs()
+
+		for _, buf in ipairs(bufs) do
+			if vim.api.nvim_buf_is_loaded(buf) then
+				if vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":e") == "t2" then
+					local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+					for _, l in ipairs(lines) do
+						local start, stop = l:find('^%s*;+%s*')
+						if start then
+							local name = trim1(l:sub(stop+1))
+							if #base == 0 or (#base < #name and name:sub(1,#base) == base) then
+								if not candidates[name] then
+									table.insert(candidates_list, name)
+									candidates[name] = true
+								end
+							end
+						end
+
+					end
+				end
+			end
+		end
+
+		return candidates_list
+
+
+	end
+end
+
+
 function contextmenu_open(candidates, callback)
 	local max_width = 0
 	for _, el in ipairs(candidates) do
@@ -1980,6 +2046,10 @@ function linkedlist.iter_from_back(pos)
 		end
 	end
 end
+-- http://lua-users.org/wiki/StringTrim
+function trim1(s)
+   return s:gsub("^%s*(.-)%s*$", "%1")
+end
 return {
 build_cache = build_cache,
 
@@ -2010,6 +2080,8 @@ tangle_buf_v2 = tangle_buf_v2,
 tangle_lines_v2 = tangle_lines_v2,
 
 tangle_buf_with_comments = tangle_buf_with_comments, 
+autocomplete_v2 = autocomplete_v2,
+
 select_contextmenu = select_contextmenu,
 
 highlight_span = highlight_span,
