@@ -45,6 +45,10 @@ local generate_header
 
 local tangle_all
 
+local tangle_buf_v2
+local tangle_write_v2
+local tangle_lines_v2
+
 local generate_comment
 
 local tangle_buf_with_comments
@@ -424,6 +428,117 @@ function get_origin(filename, asm, name)
   	end
   end
   return fn
+end
+
+local function print_statistics()
+	local filename = vim.fn.expand("%:p")
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+	local tangled = tangle_lines(filename, lines, comment)
+
+	local max_depth = {}
+	local get_max_depth
+	get_max_depth = function(name)
+		if max_depth[name] then
+			local path = vim.deepcopy(max_depth[name])
+			table.insert(path, name)
+			return path
+		end
+
+		local depth = { }
+		if tangled.sections_ll[name] then
+			local it
+	    for it in linkedlist.iter(tangled.sections_ll[name]) do
+				it = it.next
+				while it do
+				  local line = it.data
+				  if line.linetype ~= LineType.SENTINEL then
+				    if line.linetype == LineType.REFERENCE then
+							local path = get_max_depth(line.str)
+							if #path > #depth then
+								depth = path
+							end
+						elseif line.linetype == LineType.SECTION or line.linetype == LineType.ASSEMBLY then
+							break
+				    end
+				  end
+				  it = it.next
+				end
+
+	    end
+		end
+
+		max_depth[name] = vim.deepcopy(depth)
+		table.insert(depth, name)
+		return depth
+	end
+
+	for name, _ in pairs(tangled.roots) do
+		local max_path = get_max_depth(name)
+		print(name, " max path is ", #max_path)
+		local rev_max_path = {}
+		for i=1,#max_path do
+			table.insert(rev_max_path, max_path[#max_path - i + 1])
+		end
+		max_path = rev_max_path
+
+		print(vim.inspect(max_path))
+	end
+
+	local section_span = {}
+	local get_span
+	get_span = function(name)
+		if section_span[name] then
+			return section_span[name]
+		end
+
+		local num_span = 0
+		if tangled.sections_ll[name] then
+			local it
+	    for it in linkedlist.iter(tangled.sections_ll[name]) do
+				it = it.next
+				while it do
+				  local line = it.data
+				  if line.linetype ~= LineType.SENTINEL then
+				    if line.linetype == LineType.REFERENCE then
+							get_span(line.str)
+							num_span = num_span + 1
+						elseif line.linetype == LineType.SECTION or line.linetype == LineType.ASSEMBLY then
+							break
+				    end
+				  end
+				  it = it.next
+				end
+
+	    end
+		end
+
+		section_span[name] = num_span
+		return num_span
+	end
+
+	for name, _ in pairs(tangled.roots) do
+		get_span(name)
+	end
+
+	local max_span = 0
+	local max_span_name = "NONE"
+
+	local counts = {}
+	local names = {}
+	local indices = {}
+
+	for name, span in pairs(section_span) do
+		table.insert(counts, span)
+		table.insert(names, name)
+		table.insert(indices, #indices+1)
+	end
+
+	table.sort(indices, function(i1,i2) return counts[i1] > counts[i2] end)
+
+	for i=1,5 do
+		print("SPAN ", counts[indices[i]], names[indices[i]])
+	end
+
 end
 
 local function transpose()
@@ -829,9 +944,6 @@ function tangle_lines(filename, lines, comment)
 
       elseif string.match(line, "^%s*@[^@]%S*%s*$") then
         local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
-        if name == nil then
-        	print(line)
-        end
 
       	local l = { 
       		linetype = LineType.REFERENCE, 
@@ -1014,6 +1126,391 @@ function tangle_all(path)
       end
     end
   end
+end
+
+function tangle_buf_v2()
+  local filename = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+  tangle_write_v2(filename, lines, false)
+end
+
+function tangle_write_v2(filename, lines, comment)
+  local tangled = tangle_lines_v2(filename, lines, comment)
+
+  for name, root in pairs(tangled.roots) do
+    local fn = get_origin(filename, tangled.asm, name)
+
+    local lines = {}
+    generate_header(fn, lines)
+
+    local it = root.tangled[1]
+    while it and it ~= root.tangled[2] do
+      if it.data.linetype == LineType.TANGLED then
+        table.insert(lines, it.data.str)
+      end
+      it = it.next
+    end
+
+
+    local modified = false
+    do
+    	local f = io.open(fn, "r")
+    	if f then 
+    		modified = false
+    		local lnum = 1
+    		for line in f:lines() do
+    			if lnum > #lines then
+    				modified = true
+    				break
+    			end
+    			if line ~= lines[lnum] then
+    				modified = true
+    				break
+    			end
+    			lnum = lnum + 1
+    		end
+
+    		if lnum-1 ~= #lines then
+    			modified = true
+    		end
+
+    		f:close()
+    	else
+    		modified = true
+    	end
+    end
+
+    if modified then
+    	local f, err = io.open(fn, "w")
+    	if f then
+    		for _,line in ipairs(lines) do
+    			f:write(line .. "\n")
+    		end
+    		f:close()
+    	else
+    		print(err)
+    	end
+    end
+  end
+end
+
+function tangle_lines_v2(filename, lines, comment)
+  local sections_ll = {}
+
+  local roots = {}
+
+  local asm
+
+  local untangled_ll = {}
+
+  local parts_ll = {}
+
+  local tangled_ll = {}
+
+
+  if string.match(lines[1], "^;;;.") then
+    local line = lines[1]
+  	local name = string.match(line, "^;;;(.+)$")
+  	name = vim.trim(name)
+
+    asm = name
+    local curassembly = asm
+    local fn = filename or vim.api.nvim_buf_get_name(0)
+    fn = vim.fn.fnamemodify(fn, ":p")
+    local parendir = vim.fn.fnamemodify(fn, ":p:h")
+    local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+    local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+    local part_tails = {}
+    local copy_fn = fn
+    local copy_curassembly = curassembly
+    while true do
+      local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+      table.insert(part_tails, 1, part_tail)
+      copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+
+      copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+      if copy_curassembly == "." then
+        break
+      end
+      if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+        error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+      end
+    end
+    local part_tail = table.concat(part_tails, ".")
+
+    local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+    local path = vim.fn.fnamemodify(link_name, ":h")
+    if vim.fn.isdirectory(path) == 0 then
+    	-- "p" means create also subdirectories
+    	vim.fn.mkdir(path, "p") 
+    end
+
+
+    local asm_folder = vim.fn.fnamemodify(filename, ":p:h") .. "/" .. assembly_parendir .. "/tangle/"
+
+    local link_file = io.open(link_name, "w")
+    link_file:write(fn)
+    link_file:close()
+
+
+
+    local asm_tail = vim.fn.fnamemodify(asm, ":t")
+    local parts = vim.split(vim.fn.glob(asm_folder .. asm_tail .. ".*.t2"), "\n")
+
+    for _, part in ipairs(parts) do
+      local origin
+      local f = io.open(part, "r")
+      if f then
+        origin = f:read("*line")
+        f:close()
+      end
+
+      local start_part, end_part
+      if origin then
+        start_part = linkedlist.push_back(untangled_ll, {
+          linetype = LineType.SENTINEL,
+          str = origin
+        })
+
+        end_part = linkedlist.push_back(untangled_ll, {
+          linetype = LineType.SENTINEL,
+          str = origin
+        })
+      end
+
+      if origin then
+        linkedlist.push_back(parts_ll, {
+          start_part = start_part,
+          end_part = end_part,
+          origin = origin,
+        })
+      end
+
+    end
+
+
+  else
+    asm = "."
+    local origin = filename
+    local start_part, end_part
+    if origin then
+      start_part = linkedlist.push_back(untangled_ll, {
+        linetype = LineType.SENTINEL,
+        str = origin
+      })
+
+      end_part = linkedlist.push_back(untangled_ll, {
+        linetype = LineType.SENTINEL,
+        str = origin
+      })
+    end
+
+    if origin then
+      linkedlist.push_back(parts_ll, {
+        start_part = start_part,
+        end_part = end_part,
+        origin = origin,
+      })
+    end
+
+
+  end
+
+
+  local function parse(origin, lines, it)
+    for lnum, line in ipairs(lines) do
+      if string.match(line, "^;;[^;]") then
+      	local _, _, name = string.find(line, "^;;(.+)$")
+      	name = vim.trim(name)
+      	local op = "+="
+
+      	local l = {
+      	  linetype = LineType.SECTION,
+      	  str = name,
+      	  line = line,
+      	  op = op,
+      	}
+
+        it = linkedlist.insert_after(untangled_ll, it, l)
+
+        sections_ll[name] = sections_ll[name] or {}
+        linkedlist.push_back(sections_ll[name], it)
+
+
+  		elseif string.match(line, "^::[^:]") then
+  			local _, _, name = string.find(line, "^::(.+)$")
+  			name = vim.trim(name)
+  			local op = "="
+
+  			local l = {
+  			  linetype = LineType.SECTION,
+  			  str = name,
+  			  line = line,
+  			  op = op,
+  			}
+
+  		  it = linkedlist.insert_after(untangled_ll, it, l)
+
+  		  sections_ll[name] = sections_ll[name] or {}
+  		  linkedlist.push_back(sections_ll[name], it)
+
+  		  if op == "=" then 
+  		    roots[name] = {
+  		      untangled = it,
+  		      origin = origin,
+  		    }
+  		  end
+
+      elseif string.match(line, "^%s*;[^;]") then
+        local _, _, prefix, name = string.find(line, "^(%s*);(.+)$")
+        name = vim.trim(name)
+
+      	local l = { 
+      		linetype = LineType.REFERENCE, 
+      		str = name,
+      	  line = line,
+      		prefix = prefix
+      	}
+
+        it = linkedlist.insert_after(untangled_ll, it, l)
+
+
+      elseif string.match(line, "^;;;") then
+        local l = {
+          linetype = LineType.ASSEMBLY,
+          line = line,
+          str = asm,
+        }
+
+        it = linkedlist.insert_after(untangled_ll, it, l)
+
+      else
+      	local l = { 
+      		linetype = LineType.TEXT, 
+      	  line = line,
+      		str = line 
+      	}
+
+        it = linkedlist.insert_after(untangled_ll, it, l)
+
+      end
+
+    end
+  end
+
+  for part in linkedlist.iter(parts_ll) do
+    local part_lines
+    if part.origin == filename then
+      part_lines = lines
+    else
+      part_lines = {}
+      local f = io.open(part.origin, "r")
+      if f then
+        while true do
+          local line = f:read("*line")
+          if not line then break end
+          table.insert(part_lines, line)
+        end
+        f:close()
+      end
+
+    end
+    parse(part.origin, part_lines, part.start_part)
+  end
+
+
+  local function tangle_rec(name, tangled_it, prefix, root_name)
+    if not sections_ll[name] then
+      return nil, tangled_it
+    end
+
+    local start_section = linkedlist.insert_after(tangled_ll, tangled_it, {
+      linetype = LineType.SENTINEL,
+      str = "START " .. name,
+    })
+
+    local end_section = linkedlist.insert_after(tangled_ll,  start_section, {
+      linetype = LineType.SENTINEL,
+      str = "END " .. name,
+    })
+
+    for ref in linkedlist.iter(sections_ll[name]) do
+      local it = ref.next
+      local tangled_it
+      if ref.data.op == "+=" then
+        tangled_it = end_section.prev
+      elseif ref.data.op == "-=" then
+        tangled_it = start_section
+      elseif ref.data.op == "=" then
+        tangled_it = start_section
+      end
+
+      ref.data.tangled = ref.data.tangled or {}
+      table.insert(ref.data.tangled, tangled_it)
+
+      while it do
+        local line = it.data
+        if line.linetype == LineType.SECTION then
+          break
+
+        elseif line.linetype == LineType.REFERENCE then
+          local start_ref
+          if comment then
+            local l = {
+              linetype = LineType.TANGLED,
+              str = prefix .. line.prefix .. generate_comment(root_name,  line.str),
+              untangled = nil,
+            }
+            tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)
+          end
+
+          start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
+          line.tangled = line.tangled or {}
+          -- can get range by picking the next element tangled
+          table.insert(line.tangled, start_ref)
+
+
+        elseif line.linetype == LineType.ASSEMBLY then
+          break
+
+        elseif line.linetype == LineType.TEXT then
+          local l = {
+            linetype = LineType.TANGLED,
+            str = (line.str ~= "" and prefix .. line.str) or "",
+            untangled = it
+          }
+          tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)
+          line.tangled = line.tangled or {}
+          table.insert(line.tangled, tangled_it)
+        end
+
+
+        it = it.next
+      end
+    end
+    return start_section, end_section
+  end
+
+  local tangled_it = nil
+  for name, ref in pairs(roots) do
+    local it = ref.untangled.next
+    local start_root, end_root = tangle_rec(name, tangled_it, "", name)
+    roots[name].tangled = { start_root, end_root }
+    tangled_it = end_root
+
+  end
+
+  return {
+    sections_ll = sections_ll,
+
+    parts_ll = parts_ll,
+
+    asm = asm,
+    roots = roots,
+    tangled_ll = tangled_ll,
+    untangled_ll = untangled_ll,
+
+  }
 end
 
 function generate_comment(root_name, line)
@@ -1497,6 +1994,8 @@ assembleNavigate = assembleNavigate,
 getRootFilename = getRootFilename,
 get_origin = get_origin,
 
+print_statistics = print_statistics,
+
 transpose = transpose,
 
 navigateTo = navigateTo,
@@ -1507,6 +2006,9 @@ tangle_buf = tangle_buf,
 tangle_lines = tangle_lines,
 
 tangle_all = tangle_all,
+tangle_buf_v2 = tangle_buf_v2,
+tangle_lines_v2 = tangle_lines_v2,
+
 tangle_buf_with_comments = tangle_buf_with_comments, 
 select_contextmenu = select_contextmenu,
 

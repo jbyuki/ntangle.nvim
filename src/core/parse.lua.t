@@ -69,9 +69,6 @@ local l = {
 
 @get_reference_name+=
 local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
-if name == nil then
-	print(line)
-end
 
 @line_types+=
 REFERENCE = 1,

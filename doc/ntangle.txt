@@ -451,7 +451,55 @@ semantic regions.
 
 >
   :lua require"ntangle".highlight_span()
-<
+
+==========================================================================
+ntangle-v2						*ntangle-v2*
+
+The v2 ntangle syntax is an upcoming new syntax which will eventually replace
+the old syntax. However backward compatibility is ensured. All files using
+the v2 syntax should suffix the filename with ".t2". For v1 it remains "*.t".
+
+The new syntax puts an emphasis on specifying what the line is (section,
+reference, root section, etc...) exclusively in the prefix of the line. 
+For the old syntax, to specify a section it had the form:
+>
+  @a_section+=
+>
+The `+=` operator specifies what the line is but is placed at the end of
+line. By putting everything at the beginning, it allows any incremental
+tangler to avoid ambiguity and thus speeds up any processing.
+
+The new syntax is as follows.
+
+To specify an assembly:
+>
+  ;;; an assembly
+
+The new syntax also allows spaces in the name. All spaces around the name are trimmed.
+
+To specify a section:
+>
+  ;; an assembly
+
+Syntax for sections and assemblies were chosen to be deliberately similar. Assemblies
+could be viewed as "super-sections","meta-sections", essentially sections that 
+can contain other sections and root sections.
+
+To specify a root section:
+>
+  :: myfile.lua
+
+To specify a reference
+>
+  ; an assembly
+
+Again, disamguation of references and sections is done at the beginning as
+opposed to v1. There is no more `-=` and `+=` as these can be quickly
+confusing due to assemblies and their random concatenation behaviour. Instead of `-=` , a
+new section should be created to put anything that should prepended.
+
+As of now, tangling of v2 syntax is fully supported in ntangle.nvim.
+Incremental tangling in the |ntangle-future| project will only support v2.
 
 ==========================================================================
 future						*ntangle-future*
