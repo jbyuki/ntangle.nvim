@@ -47,13 +47,11 @@ local generate_header
 
 local tangle_all
 
+local tangle_all_v2
+
 local tangle_buf_v2
 local tangle_write_v2
 local tangle_lines_v2
-
-local generate_comment
-
-local tangle_buf_with_comments
 
 local autocomplete_v2
 
@@ -1269,15 +1267,6 @@ function tangle_lines(filename, lines, comment)
 
         elseif line.linetype == LineType.REFERENCE then
           local start_ref
-          if comment then
-            local l = {
-              linetype = LineType.TANGLED,
-              str = prefix .. line.prefix .. generate_comment(root_name,  line.str),
-              untangled = nil,
-            }
-            tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)
-          end
-
           start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
           line.tangled = line.tangled or {}
           -- can get range by picking the next element tangled
@@ -1353,9 +1342,39 @@ function tangle_all(path)
         table.insert(lines, line)
       end
 
+      local lines = {}
+      for line in io.lines(file) do
+        table.insert(lines, line)
+      end
+
       -- skip link files
       if #lines > 1 then 
         tangle_write(vim.fn.fnamemodify(file, ":p"), lines)
+      end
+    end
+  end
+end
+
+function tangle_all_v2(path)
+  local files = vim.split(vim.fn.glob((path or "") .. "**/*.t2"), "\n")
+
+  -- kind of ugly but works
+  -- first pass to write link files
+  for i=1,2 do
+    for _, file in ipairs(files) do
+      local lines = {}
+      for line in io.lines(file) do
+        table.insert(lines, line)
+      end
+
+      local lines = {}
+      for line in io.lines(file) do
+        table.insert(lines, line)
+      end
+
+      -- skip link files
+      if #lines > 1 then 
+        tangle_write_v2(vim.fn.fnamemodify(file, ":p"), lines)
       end
     end
   end
@@ -1688,15 +1707,6 @@ function tangle_lines_v2(filename, lines, comment)
 
         elseif line.linetype == LineType.REFERENCE then
           local start_ref
-          if comment then
-            local l = {
-              linetype = LineType.TANGLED,
-              str = prefix .. line.prefix .. generate_comment(root_name,  line.str),
-              untangled = nil,
-            }
-            tangled_it = linkedlist.insert_after(tangled_ll, tangled_it, l)
-          end
-
           start_ref, tangled_it = tangle_rec(line.str, tangled_it, prefix .. line.prefix, root_name)
           line.tangled = line.tangled or {}
           -- can get range by picking the next element tangled
@@ -1744,22 +1754,6 @@ function tangle_lines_v2(filename, lines, comment)
     untangled_ll = untangled_ll,
 
   }
-end
-
-function generate_comment(root_name, line)
-  -- Taken from http://lua-users.org/wiki/StringRecipes
-  title_case = line:gsub("_", " ")
-  title_case = title_case:gsub("^(%a)", string.upper)
-  if string.match(root_name, "%.py$") then
-    return ("# %s"):format(title_case)
-  end
-  return ""
-end
-
-function tangle_buf_with_comments()
-  local filename = vim.fn.expand("%:p")
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-  tangle_write(filename, lines, true)
 end
 
 function autocomplete_v2(findstart, base)
@@ -2438,10 +2432,10 @@ tangle_buf = tangle_buf,
 tangle_lines = tangle_lines,
 
 tangle_all = tangle_all,
+tangle_all_v2 = tangle_all_v2,
 tangle_buf_v2 = tangle_buf_v2,
 tangle_lines_v2 = tangle_lines_v2,
 
-tangle_buf_with_comments = tangle_buf_with_comments, 
 autocomplete_v2 = autocomplete_v2,
 
 select_contextmenu = select_contextmenu,

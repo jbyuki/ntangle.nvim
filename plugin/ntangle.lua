@@ -5,8 +5,11 @@ vim.api.nvim_create_autocmd("BufRead", { pattern = {"*.t2"}, callback = function
 		vim.keymap.set("n", "*", require"ntangle".star_search, { buffer = true, noremap = true, expr=true })
 end })
 
-vim.cmd [[command! TangleBuildCache lua require"ntangle".build_cache(fnamemodify("~/tangle_cache.txt", ":p"))]]
+vim.api.nvim_create_user_command("TangleBuildCache", function(...) 
+	local dir = vim.fn.fnamemodify("~/tangle_cache.txt", ":p")
+	require"ntangle".build_cache(dir) 
+end, { bang = true})
 
-vim.cmd [[command! TangleAll lua require"ntangle".tangle_all()]]
+vim.api.nvim_create_user_command("TangleAll", function(...) require"ntangle".tangle_all() end, { bang = true})
+vim.api.nvim_create_user_command("TangleAllV2", function(...) require"ntangle".tangle_all_v2() end, { bang = true})
 
-vim.cmd [[command! TangleWithComments lua require"ntangle".tangle_buf_with_comments()]]
