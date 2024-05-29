@@ -35,6 +35,8 @@ local linkedlist = {}
 
 local get_origin
 
+local get_origin_v2
+
 local create_transpose_buf
 
 local tangle_buf
@@ -505,6 +507,57 @@ function get_origin(filename, asm, name)
   return fn
 end
 
+function get_origin_v2(filename, asm, name)
+  local curassembly = asm
+  local fn = filename or vim.api.nvim_buf_get_name(0)
+  fn = vim.fn.fnamemodify(fn, ":p")
+  local parendir = vim.fn.fnamemodify(fn, ":p:h")
+  local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+  local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+  local part_tails = {}
+  local copy_fn = fn
+  local copy_curassembly = curassembly
+  while true do
+    local part_tail = vim.fn.fnamemodify(copy_fn, ":t")
+    table.insert(part_tails, 1, part_tail)
+    copy_fn = vim.fn.fnamemodify(copy_fn, ":h")
+
+    copy_curassembly = vim.fn.fnamemodify(copy_curassembly, ":h")
+    if copy_curassembly == "." then
+      break
+    end
+    if copy_curassembly ~= ".." and vim.fn.fnamemodify(copy_curassembly, ":h") ~= ".." then
+      error("Assembly can't be in a subdirectory (it must be either in parent or same directory")
+    end
+  end
+  local part_tail = table.concat(part_tails, ".")
+
+  local link_name = parendir .. "/" .. assembly_parendir .. "/.ntangle/" .. assembly_tail .. "." .. part_tail
+  local path = vim.fn.fnamemodify(link_name, ":h")
+  if vim.fn.isdirectory(path) == 0 then
+  	-- "p" means create also subdirectories
+  	vim.fn.mkdir(path, "p") 
+  end
+
+
+
+  local parendir = vim.fn.fnamemodify(filename, ":p:h" ) .. "/" .. assembly_parendir
+
+  local fn
+  if name == "*" then
+  	local tail = vim.fn.fnamemodify(filename, ":t:r" )
+  	fn = parendir .. "/.ntangle/" .. tail
+
+  else
+  	if string.find(name, "/") then
+  		fn = parendir .. "/" .. name
+  	else
+  		fn = parendir .. "/.ntangle/" .. name
+  	end
+  end
+  return fn
+end
+
 local function print_statistics()
 	local filename = vim.fn.expand("%:p")
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -809,7 +862,7 @@ local function transpose_v2()
   for name, root in pairs(tangled.roots) do
     local lnum = 1
     local lines = {}
-    local fn = get_origin(buf, tangled.asm, name)
+    local fn = get_origin_v2(buf, tangled.asm, name)
     generate_header(fn, lines)
 
     lnum = lnum + #lines
@@ -853,7 +906,7 @@ local function transpose_v2()
 		local transpose_lines = {}
 
 		local lines = {}
-		local fn = get_origin(buf, tangled.asm, jumpline.data.root)
+		local fn = get_origin_v2(buf, tangled.asm, jumpline.data.root)
 		generate_header(fn, lines)
 
 
@@ -871,7 +924,6 @@ local function transpose_v2()
 		end
 
 		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
-
 		vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
 
 
@@ -1319,7 +1371,7 @@ function tangle_write_v2(filename, lines, comment)
   local tangled = tangle_lines_v2(filename, lines, comment)
 
   for name, root in pairs(tangled.roots) do
-    local fn = get_origin(filename, tangled.asm, name)
+    local fn = get_origin_v2(filename, tangled.asm, name)
 
     local lines = {}
     generate_header(fn, lines)
@@ -1419,7 +1471,7 @@ function tangle_lines_v2(filename, lines, comment)
     end
     local part_tail = table.concat(part_tails, ".")
 
-    local link_name = parendir .. "/" .. assembly_parendir .. "/tangle/" .. assembly_tail .. "." .. part_tail
+    local link_name = parendir .. "/" .. assembly_parendir .. "/.ntangle/" .. assembly_tail .. "." .. part_tail
     local path = vim.fn.fnamemodify(link_name, ":h")
     if vim.fn.isdirectory(path) == 0 then
     	-- "p" means create also subdirectories
@@ -1427,7 +1479,7 @@ function tangle_lines_v2(filename, lines, comment)
     end
 
 
-    local asm_folder = vim.fn.fnamemodify(filename, ":p:h") .. "/" .. assembly_parendir .. "/tangle/"
+    local asm_folder = vim.fn.fnamemodify(filename, ":p:h") .. "/" .. assembly_parendir .. "/.ntangle/"
 
     local link_file = io.open(link_name, "w")
     link_file:write(fn)
@@ -2217,7 +2269,7 @@ function star_search(...)
 			advance = "n" 
 		end
 
-		return "/" .. name .. '<CR>' .. advance
+		return "/" .. name .. '\\s*$<CR>' .. advance
 	else
 		return "*"
 
@@ -2370,6 +2422,8 @@ show_assemble_v2 = show_assemble_v2,
 getRootFilename = getRootFilename,
 get_origin = get_origin,
 
+get_origin_v2 = get_origin_v2,
+
 print_statistics = print_statistics,
 
 transpose = transpose,
@@ -2377,6 +2431,7 @@ transpose = transpose,
 navigateTo = navigateTo,
 
 transpose_v2 = transpose_v2,
+
 LineType = LineType,
 
 tangle_buf = tangle_buf,

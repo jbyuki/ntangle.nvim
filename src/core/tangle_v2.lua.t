@@ -15,7 +15,7 @@ function tangle_write_v2(filename, lines, comment)
   local tangled = tangle_lines_v2(filename, lines, comment)
 
   for name, root in pairs(tangled.roots) do
-    local fn = get_origin(filename, tangled.asm, name)
+    local fn = get_origin_v2(filename, tangled.asm, name)
 
     local lines = {}
     @output_ntangle_header
@@ -57,8 +57,8 @@ if string.match(lines[1], "^;;;.") then
 	@extract_assembly_name_v2
   asm = name
   local curassembly = asm
-  @construct_path_for_link_file
-  @get_assembly_folder
+  @construct_path_for_link_file_v2
+  @get_assembly_folder_v2
   @write_link_file
   @glob_all_part_links_v2
   @foreach_part_append_info
@@ -70,6 +70,20 @@ name = vim.trim(name)
 @glob_all_part_links_v2+=
 local asm_tail = vim.fn.fnamemodify(asm, ":t")
 local parts = vim.split(vim.fn.glob(asm_folder .. asm_tail .. ".*.t2"), "\n")
+
+@construct_path_for_link_file_v2+=
+local fn = filename or vim.api.nvim_buf_get_name(0)
+fn = vim.fn.fnamemodify(fn, ":p")
+local parendir = vim.fn.fnamemodify(fn, ":p:h")
+local assembly_parendir = vim.fn.fnamemodify(curassembly, ":h")
+local assembly_tail = vim.fn.fnamemodify(curassembly, ":t")
+@build_part_tail
+local link_name = parendir .. "/" .. assembly_parendir .. "/.ntangle/" .. assembly_tail .. "." .. part_tail
+local path = vim.fn.fnamemodify(link_name, ":h")
+@create_directory_if_non_existent
+
+@get_assembly_folder_v2+=
+local asm_folder = vim.fn.fnamemodify(filename, ":p:h") .. "/" .. assembly_parendir .. "/.ntangle/"
 
 @define_parse_v2+=
 local function parse(origin, lines, it)

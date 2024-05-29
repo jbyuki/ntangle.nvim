@@ -30,4 +30,4 @@ if col <= stop then
 end
 
 @search_for_section_and_reference_name+=
-return "/" .. name .. '<CR>' .. advance
+return "/" .. name .. '\\s*$<CR>' .. advance
