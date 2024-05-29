@@ -363,6 +363,75 @@ local function assembleNavigate()
 
 end
 
+local function show_assemble_v2()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+  local tangled = tangle_lines_v2(buf, lines)
+	local assembled = {}
+
+  for line in linkedlist.iter(tangled.untangled_ll) do
+    if line.linetype ~= LineType.SENTINEL then
+      table.insert(assembled, line.line)
+    end
+  end
+  local lnum = 1
+  for line in linkedlist.iter(tangled.untangled_ll) do
+    if line.linetype ~= LineType.SENTINEL then
+      line.lnum = lnum
+      lnum = lnum + 1
+    end
+  end
+
+
+  local _, row, _, _ = unpack(vim.fn.getpos("."))
+
+  local ft = vim.api.nvim_buf_get_option(0, "ft")
+
+  create_transpose_buf()
+
+  vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, assembled)
+
+  local start_part, end_part
+  for part in linkedlist.iter(tangled.parts_ll) do
+    if part.origin == buf then
+      start_part = part.start_part
+      end_part = part.end_part
+      break
+    end
+  end
+
+  local untangled_it
+
+  local it = start_part
+  local lnum = 1
+  while it and it ~= end_part do
+    local line = it.data
+    if line.linetype ~= LineType.SENTINEL then
+      if lnum == row then
+        untangled_it = it
+        break
+      end
+      lnum = lnum + 1
+    end
+    it = it.next
+  end
+
+  if untangled_it then
+    vim.api.nvim_win_set_cursor(0, {untangled_it.data.lnum, 0})
+  end
+
+
+  assemble_nav = {
+    tangled = tangled,
+    buf = buf
+  }
+
+
+  vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>u', '<cmd>lua require"ntangle".assembleNavigate()<CR>', {noremap = true})
+
+end
+
 local function getRootFilename()
   local buf = vim.fn.expand("%:p")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -722,6 +791,112 @@ local function navigateTo()
     vim.api.nvim_win_set_cursor(0, {lnum, 0})
 
   end
+end
+
+local function transpose_v2()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+  local tangled = tangle_lines_v2(buf, lines)
+	local assembled = {}
+
+	local _, row, _, _ = unpack(vim.fn.getpos("."))
+
+	local ft = vim.api.nvim_buf_get_option(0, "ft")
+
+
+  local jumplines = {}
+  for name, root in pairs(tangled.roots) do
+    local lnum = 1
+    local lines = {}
+    local fn = get_origin(buf, tangled.asm, name)
+    generate_header(fn, lines)
+
+    lnum = lnum + #lines
+
+    local it = root.tangled[1]
+    while it and it ~= root.tangled[2] do
+      if it.data.linetype ~= LineType.SENTINEL then
+        it.data.lnum = lnum
+        it.data.root = name
+        lnum = lnum + 1
+      end
+      it = it.next
+    end
+  end
+
+  for part in linkedlist.iter(tangled.parts_ll) do
+    if part.origin == buf then
+      local part_lnum = 1
+      local it = part.start_part
+      while it and it ~= part.end_part do
+        if it.data.linetype ~= LineType.SENTINEL then
+          if part_lnum == row then
+            jumplines = it.data.tangled
+            break
+          end
+          part_lnum = part_lnum + 1
+        end
+        it = it.next
+      end
+
+      if jumplines then break end
+    end
+  end
+
+
+	local selected = function(row) 
+		local jumpline = jumplines[row]
+
+    create_transpose_buf()
+
+		local transpose_lines = {}
+
+		local lines = {}
+		local fn = get_origin(buf, tangled.asm, jumpline.data.root)
+		generate_header(fn, lines)
+
+
+		for _, line in ipairs(lines) do
+		  table.insert(transpose_lines, line)
+		end
+
+		local root = tangled.roots[jumpline.data.root]
+		local it = root.tangled[1]
+		while it and it ~= root.tangled[2] do
+		  if it.data.linetype ~= LineType.SENTINEL then
+		    table.insert(transpose_lines, it.data.str)
+		  end
+		  it = it.next
+		end
+
+		vim.api.nvim_buf_set_lines(transpose_buf, 0, -1, false, transpose_lines)
+
+		vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>i', '<cmd>lua require"ntangle".navigateTo()<CR>', {noremap = true})
+
+
+    navigationLines = {
+      tangled = tangled,
+      buf = buf,
+      root = jumpline.data.root,
+    }
+
+		vim.schedule(function()
+		  vim.api.nvim_win_set_cursor(transpose_win, {jumpline.data.lnum, 0})
+		end)
+
+	end
+
+	assert(jumplines and #jumplines > 0, "Could not find line to jump")
+	if #jumplines == 1 then
+		selected(1)
+	else
+		local options = {}
+		for _, jumpline in ipairs(jumplines) do
+			table.insert(options, "L" .. jumpline.data.lnum .. " " .. jumpline.data.root)
+		end
+		contextmenu_open(options, selected)
+	end
 end
 
 function tangle_buf()
@@ -1921,6 +2096,113 @@ function clear_highlight_autocmd(events, ns)
   vim.api.nvim_command("autocmd "..table.concat(events, ',').." <buffer> ++once lua pcall(vim.api.nvim_buf_clear_namespace, 0, "..ns..", 0, -1)")
 end
 
+local function show_helper_v2()
+  local buf = vim.fn.expand("%:p")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
+
+  local tangled = tangle_lines_v2(buf, lines)
+
+	local qflist = {}
+	local undefined_section = {}
+	for line in linkedlist.iter(tangled.untangled_ll) do
+	  if line.linetype == LineType.REFERENCE then
+	    if not line.tangled or #line.tangled == 0 then
+	      undefined_section[line.str] = true
+	    end
+	  end
+	end
+
+	local orphan_section = {}
+	for line in linkedlist.iter(tangled.untangled_ll) do
+	  if line.linetype == LineType.SECTION then
+	    if not line.tangled or #line.tangled == 0 then
+	      orphan_section[line.str] = true
+	    end
+	  end
+	end
+
+
+  for name, _ in pairs(undefined_section) do
+  	table.insert(qflist, { name:gsub("_", " "), " is empty" } )
+  end
+
+  for name, _ in pairs(orphan_section) do
+  	table.insert(qflist, { name:gsub("_", " ") , " orphan section" })
+  end
+
+
+	if #qflist == 0 then
+		table.insert(qflist, { "  No warnings :)  ", "" })
+	end
+
+	local max_width = 0
+	for _, line in ipairs(qflist) do
+		max_width = math.max(max_width, vim.api.nvim_strwidth(line[1] .. " " .. line[2]) + 2)
+	end
+
+	local buf = vim.api.nvim_create_buf(false, true)
+	local w, h = vim.api.nvim_win_get_width(0), vim.api.nvim_win_get_height(0)
+
+	local MAX_WIDTH = 60
+	local MAX_HEIGHT = 15
+
+	local popup = {
+		width = math.min(max_width, MAX_WIDTH),
+		height = math.min(#qflist, MAX_HEIGHT),
+		margin_up = 3,
+		margin_right = 6,
+	}
+
+	local opts = {
+		relative = "win",
+		win = vim.api.nvim_get_current_win(),
+		width = popup.width,
+		height = popup.height,
+		col = w - popup.width - popup.margin_right,
+		row =  popup.margin_up,
+		style = 'minimal',
+	  border = 'single',
+	}
+
+	local win = vim.api.nvim_open_win(buf, false, opts)
+
+	vim.api.nvim_win_set_option(win, "winblend", 30)
+
+	local newlines = {}
+	for _, p in ipairs(qflist) do
+	  table.insert(newlines, p[1])
+	end
+
+	vim.api.nvim_buf_set_lines(buf, 0, -1, true, newlines)
+
+  local ns_id = vim.api.nvim_create_namespace("")
+  for lnum, p in ipairs(qflist) do
+    vim.api.nvim_buf_set_extmark(buf, ns_id, lnum-1, 0, {
+      virt_text = {{ p[2], "NonText"}}
+    })
+    table.insert(newlines, p[1])
+  end
+
+	close_preview_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, win)
+
+
+  undefined_ns = vim.api.nvim_create_namespace("")
+
+  for lnum, line in ipairs(lines) do
+    for name, _ in pairs(undefined_section) do
+      local s1, s2 = line:find("^%s*;%s*" .. name .. "%s*$")
+      if s1 then
+        vim.api.nvim_buf_set_extmark(0, undefined_ns, lnum-1, s1-1, {
+          hl_group = "IncSearch",
+          end_col = s2
+        })
+
+      end
+    end
+  end
+  clear_highlight_autocmd({"CursorMoved", "CursorMovedI", "BufHidden", "BufLeave"}, undefined_ns)
+end
+
 function star_search(...)
 	local line = vim.api.nvim_get_current_line()
 
@@ -2084,6 +2366,7 @@ show_assemble = show_assemble,
 
 assembleNavigate = assembleNavigate,
 
+show_assemble_v2 = show_assemble_v2,
 getRootFilename = getRootFilename,
 get_origin = get_origin,
 
@@ -2093,6 +2376,7 @@ transpose = transpose,
 
 navigateTo = navigateTo,
 
+transpose_v2 = transpose_v2,
 LineType = LineType,
 
 tangle_buf = tangle_buf,
@@ -2116,6 +2400,8 @@ jump_cache = jump_cache,
 jump_this_ref = jump_this_ref,
 
 show_helper = show_helper,
+
+show_helper_v2 = show_helper_v2,
 
 star_search = star_search,
 
