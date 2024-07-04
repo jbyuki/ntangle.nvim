@@ -20,6 +20,7 @@ local function show_assemble_v2()
 
   @build_navigation_lines
   @keymap_assemble_buffer
+  @move_cursor_to_show_window
 end
 
 @export_symbols+=

@@ -20,6 +20,8 @@ local function show_assemble()
 
   @build_navigation_lines
   @keymap_assemble_buffer
+
+  @move_cursor_to_show_window
 end
 
 @export_symbols+=
@@ -129,3 +131,10 @@ for line in linkedlist.iter(tangled.untangled_ll) do
     table.insert(assembled, line.line)
   end
 end
+
+@move_cursor_to_show_window+=
+vim.schedule(function()
+  local pos = vim.api.nvim_win_get_cursor(transpose_win)
+  vim.api.nvim_win_set_cursor(transpose_win, pos)
+end)
+

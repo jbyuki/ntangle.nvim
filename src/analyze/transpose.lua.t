@@ -97,6 +97,8 @@ local opts = {
 	col = math.floor((win_width-width)/2),
 	relative = "editor",
   border = "single",
+  zindex = 50,
+  hide = false,
 }
 
 transpose_win = vim.api.nvim_open_win(transpose_buf, true, opts)

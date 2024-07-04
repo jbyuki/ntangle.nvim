@@ -270,6 +270,7 @@ local function show_assemble()
       table.insert(assembled, line.line)
     end
   end
+
   local lnum = 1
   for line in linkedlist.iter(tangled.untangled_ll) do
     if line.linetype ~= LineType.SENTINEL then
@@ -324,6 +325,12 @@ local function show_assemble()
 
 
   vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>u', '<cmd>lua require"ntangle".assembleNavigate()<CR>', {noremap = true})
+
+
+  vim.schedule(function()
+    local pos = vim.api.nvim_win_get_cursor(transpose_win)
+    vim.api.nvim_win_set_cursor(transpose_win, pos)
+  end)
 
 end
 
@@ -375,6 +382,7 @@ local function show_assemble_v2()
       table.insert(assembled, line.line)
     end
   end
+
   local lnum = 1
   for line in linkedlist.iter(tangled.untangled_ll) do
     if line.linetype ~= LineType.SENTINEL then
@@ -429,6 +437,11 @@ local function show_assemble_v2()
 
 
   vim.api.nvim_buf_set_keymap(transpose_buf, 'n', '<leader>u', '<cmd>lua require"ntangle".assembleNavigate()<CR>', {noremap = true})
+
+  vim.schedule(function()
+    local pos = vim.api.nvim_win_get_cursor(transpose_win)
+    vim.api.nvim_win_set_cursor(transpose_win, pos)
+  end)
 
 end
 
@@ -789,6 +802,8 @@ function create_transpose_buf()
   	col = math.floor((win_width-width)/2),
   	relative = "editor",
     border = "single",
+    zindex = 50,
+    hide = false,
   }
 
   transpose_win = vim.api.nvim_open_win(transpose_buf, true, opts)
