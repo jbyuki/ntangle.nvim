@@ -23,7 +23,7 @@ autocomplete_v2 = autocomplete_v2,
 local  col= vim.fn.col('.')
 
 @find_col_where_completion_should_start+=
-local start, stop =  string.find(line, '^%s*;+%s*')
+local start, stop =  string.find(line, '^%s*;+%-?%s*')
 if not start then
 	return -3
 end

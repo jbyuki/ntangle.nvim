@@ -10,7 +10,7 @@ function star_search(...)
 	@get_current_line
 	@get_cursor_position
 
-	local start, stop =  string.find(line, '^%s*;+%s*')
+	local start, stop =  string.find(line, '^%s*;+%-?%s*')
 	if start then
 		local name = trim1(line:sub(stop+1))
 		@decide_if_needs_to_advance

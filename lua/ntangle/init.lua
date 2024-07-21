@@ -1782,7 +1782,7 @@ function autocomplete_v2(findstart, base)
 	local  col= vim.fn.col('.')
 
 	if findstart == 1 then
-		local start, stop =  string.find(line, '^%s*;+%s*')
+		local start, stop =  string.find(line, '^%s*;+%-?%s*')
 		if not start then
 			return -3
 		end
@@ -2275,7 +2275,7 @@ function star_search(...)
 	local  col= vim.fn.col('.')
 
 
-	local start, stop =  string.find(line, '^%s*;+%s*')
+	local start, stop =  string.find(line, '^%s*;+%-?%s*')
 	if start then
 		local name = trim1(line:sub(stop+1))
 		local advance = ""
