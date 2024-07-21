@@ -1587,9 +1587,14 @@ function tangle_lines_v2(filename, lines, comment)
   local function parse(origin, lines, it)
     for lnum, line in ipairs(lines) do
       if string.match(line, "^;;[^;]") then
-      	local _, _, name = string.find(line, "^;;(.+)$")
+      	local _, _, prepend, name = string.find(line, "^;;(%-?)(.+)$")
       	name = vim.trim(name)
-      	local op = "+="
+      	local op
+      	if prepend == "-" then
+      	  op = "-="
+      	else
+      	  op = "+="
+      	end
 
       	local l = {
       	  linetype = LineType.SECTION,

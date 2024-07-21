@@ -104,9 +104,14 @@ if string.match(line, "^;;[^;]") then
   @add_ref_to_sections
 
 @parse_section_name_v2+=
-local _, _, name = string.find(line, "^;;(.+)$")
+local _, _, prepend, name = string.find(line, "^;;(%-?)(.+)$")
 name = vim.trim(name)
-local op = "+="
+local op
+if prepend == "-" then
+  op = "-="
+else
+  op = "+="
+end
 
 @if_line_is_root_section_v2+=
 elseif string.match(line, "^::[^:]") then

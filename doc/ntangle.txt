@@ -499,9 +499,11 @@ To specify a reference
   ; a reference
 <
 Again, disamguation of references and sections is done at the beginning as
-opposed to v1. There is no more `-=` and `+=` as these can be quickly
-confusing due to assemblies and their random concatenation behaviour. Instead of `-=` , a
-new section should be created to put anything that should prepended.
+opposed to v1. For prepending, the special syntax `;;-` can be used. For
+example:
+>
+  ;;- a section
+<
 
 As of now, tangling of v2 syntax is fully supported in ntangle.nvim.
 Incremental tangling in the |ntangle-future| project will only support v2.
