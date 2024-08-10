@@ -61,6 +61,8 @@ local jump_cache
 
 local jump_this_ref
 
+local tangle_migrate_v2
+
 local close_preview_autocmd
 
 local clear_highlight_autocmd
@@ -2068,6 +2070,144 @@ function jump_this_ref()
 
 end
 
+function tangle_migrate_v2(path)
+	local files = vim.split(vim.fn.glob((path or "") .. "**/*.t"), "\n")
+
+
+	for _, file in ipairs(files) do
+		local lines = {}
+		for line in io.lines(file) do
+		  table.insert(lines, line)
+		end
+
+		local lines = {}
+		for line in io.lines(file) do
+		  table.insert(lines, line)
+		end
+
+		if #lines > 1 then
+			local sections_ll = {}
+
+			local roots = {}
+
+			local asm
+
+			local untangled_ll = {}
+
+			local parts_ll = {}
+
+			local tangled_ll = {}
+
+			local function parse(origin, lines, it)
+			  for lnum, line in ipairs(lines) do
+			    if string.match(line, "^%s*@@") then
+			      local _,_,pre,post = string.find(line, '^(.*)@@(.*)$')
+			      local text = pre .. "@" .. post
+			      local l = { 
+			      	linetype = LineType.TEXT, 
+			        line = line,
+			      	str = text 
+			      }
+
+			      it = linkedlist.insert_after(untangled_ll, it, l)
+
+
+			    elseif string.match(line, "^@[^@]%S*[+-]?=%s*$") then
+			    	local _, _, name, op = string.find(line, "^@(%S-)([+-]?=)%s*$")
+
+			    	local l = {
+			    	  linetype = LineType.SECTION,
+			    	  str = name,
+			    	  line = line,
+			    	  op = op,
+			    	}
+
+			      it = linkedlist.insert_after(untangled_ll, it, l)
+
+			      sections_ll[name] = sections_ll[name] or {}
+			      linkedlist.push_back(sections_ll[name], it)
+
+			      if op == "=" then 
+			        roots[name] = {
+			          untangled = it,
+			          origin = origin,
+			        }
+			      end
+
+			    elseif string.match(line, "^%s*@[^@]%S*%s*$") then
+			      local _, _, prefix, name = string.find(line, "^(%s*)@(%S+)%s*$")
+
+			    	local l = { 
+			    		linetype = LineType.REFERENCE, 
+			    		str = name,
+			    	  line = line,
+			    		prefix = prefix
+			    	}
+
+			      it = linkedlist.insert_after(untangled_ll, it, l)
+
+
+			    elseif string.match(line, "^##%S*%s*$") then
+			      local l = {
+			        linetype = LineType.ASSEMBLY,
+			        line = line,
+			        str = asm,
+			      }
+
+			      it = linkedlist.insert_after(untangled_ll, it, l)
+
+
+			    else
+			    	local l = { 
+			    		linetype = LineType.TEXT, 
+			    	  line = line,
+			    		str = line 
+			    	}
+
+			      it = linkedlist.insert_after(untangled_ll, it, l)
+
+			    end
+
+			  end
+			end
+
+			parse(nil, lines, nil)
+
+			local lines_v2 = {}
+			for line in linkedlist.iter(untangled_ll) do
+			  if line.linetype == LineType.TEXT then
+					table.insert(lines_v2, line.str)
+
+				elseif line.linetype == LineType.REFERENCE then
+					table.insert(lines_v2, ("%s; %s"):format(line.prefix, line.str:gsub("_", " ")))
+
+				elseif line.linetype == LineType.SECTION then
+					if roots[line.str] then
+						table.insert(lines_v2, (":: %s"):format( line.str))
+					else
+						if line.op == "-=" then
+							table.insert(lines_v2, (";;- %s"):format( line.str:gsub("_", " ")))
+						else
+							table.insert(lines_v2, (";; %s"):format(line.str:gsub("_", " ")))
+						end
+					end
+
+				elseif line.linetype == LineType.ASSEMBLY then
+					table.insert(lines_v2,(";;; %s"):format(vim.trim(line.line:sub(3)):gsub("_", " ")))
+
+				end
+			end
+
+			local t2_file = file .. "2"
+			local new_f = io.open(t2_file, "w")
+			for _, line in ipairs(lines_v2) do 
+				new_f:write(line .. "\n")
+			end
+			new_f:close()
+		end
+	end
+end
+
 local function show_helper()
   local buf = vim.fn.expand("%:p")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -2490,6 +2630,8 @@ clear_highlight_span = clear_highlight_span,
 jump_cache = jump_cache,
 
 jump_this_ref = jump_this_ref,
+
+tangle_migrate_v2 = tangle_migrate_v2 ,
 
 show_helper = show_helper,
 

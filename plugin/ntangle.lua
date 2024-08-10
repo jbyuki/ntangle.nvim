@@ -13,3 +13,5 @@ end, { bang = true})
 vim.api.nvim_create_user_command("TangleAll", function(...) require"ntangle".tangle_all() end, { bang = true})
 vim.api.nvim_create_user_command("TangleAllV2", function(...) require"ntangle".tangle_all_v2() end, { bang = true})
 
+vim.api.nvim_create_user_command("TangleMigrateV2", function(...) require"ntangle".tangle_migrate_v2() end, { bang = true})
+
